@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -853,7 +854,8 @@
                 this.teacherBuffer = {
                     text: "",
                     lastAppendAt: 0,
-                    flushTimer: null
+                    flushTimer: null,
+                    lastSentText: "" // To prevent duplicates on restart
                 };
                 // ================================================================================================
 
@@ -2144,10 +2146,17 @@
                 const c = this.normalizeSpacing(chunk);
                 if (!c) return;
 
+                // Fix: Ensure we don't double append on quick restarts
+                if (c === this.teacherBuffer.lastSentText) return;
+
                 if (!this.teacherBuffer.text) this.teacherBuffer.text = c;
                 else this.teacherBuffer.text = this.normalizeSpacing(this.teacherBuffer.text + " " + c);
 
                 this.teacherBuffer.lastAppendAt = Date.now();
+
+                // Clear visual buffer from UI immediately so it doesn't look like a duplicate
+                const ui = document.getElementById("teacher-transcript");
+                if (ui) ui.innerText = this.teacherBuffer.text + "...";
 
                 if (this.endsWithSentenceBoundary(c)) {
                     this.flushTeacherBuffer(true);
@@ -2173,6 +2182,12 @@
                 const text = this.normalizeSpacing(this.teacherBuffer.text);
                 if (!text) return;
 
+                // Deduping check
+                if (text === this.teacherBuffer.lastSentText) {
+                    this.teacherBuffer.text = "";
+                    return;
+                }
+
                 if (!force) {
                     const tooShort = text.length < 18 && !this.endsWithSentenceBoundary(text);
                     if (tooShort) return;
@@ -2180,8 +2195,13 @@
 
                 this.teacherBuffer.text = "";
                 this.teacherBuffer.lastAppendAt = 0;
+                this.teacherBuffer.lastSentText = text; // Store last sent to prevent duplicate on restart
 
                 this.broadcastMessage(text);
+
+                // Fix: Clear UI immediately after sending
+                const ui = document.getElementById("teacher-transcript");
+                if (ui) ui.innerText = "Listening...";
             }
             // ========================================================================
 
@@ -2218,6 +2238,7 @@
                         }
                     }
 
+                    // Only update UI with interim if we have it
                     const ui = document.getElementById("teacher-transcript");
                     if (ui) {
                         const buffered = this.teacherBuffer?.text ? (this.teacherBuffer.text + " ") : "";
@@ -2234,7 +2255,10 @@
 
                 this.recognition.onerror = (event) => {
                     console.error('Speech recognition error:', event.error);
-                    this.showToast(`Speech error: ${event.error}`, 'error');
+                    // Don't show toast for no-speech, it's annoying
+                    if (event.error !== 'no-speech') {
+                         this.showToast(`Speech error: ${event.error}`, 'error');
+                    }
                 };
 
                 // ===================== FIX: FLUSH leftover buffer on end before restart =====================
@@ -2340,15 +2364,24 @@
                     .trim();
             }
 
-            // ===================== FIX: translateText returns ALL segments (no truncation) =====================
+            // ===================== FIX: translateText =====================
             async translateText(text, source, target) {
                 if (!text) return "";
                 if (!source || !target) return text;
-                if (source === target) return text;
+                
+                // Fix: Google Translate API (free tier) fails with full locale codes (e.g. en-US). 
+                // We strip them to base codes (en) unless it's Chinese.
+                let s = source; 
+                let t = target;
+
+                if (!s.startsWith('zh')) s = s.split('-')[0];
+                if (!t.startsWith('zh')) t = t.split('-')[0];
+
+                if (s === t) return text;
 
                 let normalizedText = text;
 
-                if (source === "nl" || source === "nl-BE") {
+                if (s === "nl") {
                     normalizedText = String(text).replace(/\b(oké|okee|okey|oke)\b/gi, "okay");
                 }
 
@@ -2357,8 +2390,8 @@
                 try {
                     const url =
                         "https://translate.googleapis.com/translate_a/single" +
-                        `?client=gtx&sl=${encodeURIComponent(source)}` +
-                        `&tl=${encodeURIComponent(target)}` +
+                        `?client=gtx&sl=${encodeURIComponent(s)}` +
+                        `&tl=${encodeURIComponent(t)}` +
                         `&dt=t&q=${encodeURIComponent(normalizedText)}`;
 
                     const res = await fetch(url);
@@ -2373,6 +2406,7 @@
 
                     return text;
                 } catch (e) {
+                    console.log("Translation failed", e);
                     return text;
                 }
             }
