@@ -831,6 +831,27 @@
                 this.recognition = null;
                 this.wakeLock = null;
 
+                // VAD (Voice Activity Detection) Configuration
+                this.vadConfig = {
+                    silenceThreshold: 0.01,      // Volume below this = silence
+                    silenceDuration: 1500,       // ms of silence before segment ends
+                    minSpeechDuration: 300,      // ms minimum speech to count as valid
+                    sampleInterval: 100          // ms between volume checks
+                };
+
+                // Teacher VAD state
+                this.teacherVad = {
+                    audioContext: null,
+                    analyser: null,
+                    mediaStream: null,
+                    isSpeaking: false,
+                    silenceStart: null,
+                    speechStart: null,
+                    vadInterval: null,
+                    pendingTranscript: '',
+                    lastBroadcastTime: 0
+                };
+
                 // Student mic/request flow state
                 this.student = {
                     requestPending: false,
@@ -845,7 +866,16 @@
                     mediaStream: null,
                     audioChunks: [],
                     finalParts: [],
-                    lastInterim: ''
+                    lastInterim: '',
+                    // Student VAD state
+                    vad: {
+                        audioContext: null,
+                        analyser: null,
+                        isSpeaking: false,
+                        silenceStart: null,
+                        speechStart: null,
+                        vadInterval: null
+                    }
                 };
 
                 this.bindAll();
@@ -1357,6 +1387,9 @@
                     // Start media stream for audio recording
                     this.student.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+                    // Start VAD monitoring for student
+                    this.startStudentVad(this.student.mediaStream);
+
                     // Wake Lock (best-effort)
                     if ('wakeLock' in navigator) {
                         try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (_) { }
@@ -1420,6 +1453,9 @@
             }
 
             async stopStudentCapture(submit = true) {
+                // Stop VAD monitoring first
+                this.stopStudentVad();
+                
                 // Stop speech recognition
                 try { if (this.student.recognition) this.student.recognition.stop(); } catch (_) { }
 
@@ -2141,6 +2177,198 @@
                 }
             }
 
+            // ========== VAD (Voice Activity Detection) Methods ==========
+            
+            /**
+             * Initialize VAD for a given audio stream
+             * @param {MediaStream} stream - The audio stream to analyze
+             * @returns {Object} - { audioContext, analyser, dataArray }
+             */
+            initVadAnalyser(stream) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.5;
+                
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                return { audioContext, analyser, dataArray };
+            }
+
+            /**
+             * Get current volume level from analyser (0-1 normalized)
+             * @param {AnalyserNode} analyser 
+             * @param {Uint8Array} dataArray 
+             * @returns {number} - Volume level 0-1
+             */
+            getVolumeLevel(analyser, dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+                return average / 255; // Normalize to 0-1
+            }
+
+            /**
+             * Start VAD monitoring for teacher
+             * @param {MediaStream} stream 
+             */
+            startTeacherVad(stream) {
+                const { audioContext, analyser, dataArray } = this.initVadAnalyser(stream);
+                
+                this.teacherVad.audioContext = audioContext;
+                this.teacherVad.analyser = analyser;
+                this.teacherVad.mediaStream = stream;
+                this.teacherVad.isSpeaking = false;
+                this.teacherVad.silenceStart = null;
+                this.teacherVad.speechStart = null;
+                this.teacherVad.pendingTranscript = '';
+
+                this.teacherVad.vadInterval = setInterval(() => {
+                    const volume = this.getVolumeLevel(analyser, dataArray);
+                    const now = Date.now();
+                    
+                    if (volume > this.vadConfig.silenceThreshold) {
+                        // Voice detected
+                        if (!this.teacherVad.isSpeaking) {
+                            this.teacherVad.isSpeaking = true;
+                            this.teacherVad.speechStart = now;
+                            this.teacherVad.silenceStart = null;
+                            console.log('[VAD] Speech started');
+                        }
+                    } else {
+                        // Silence detected
+                        if (this.teacherVad.isSpeaking) {
+                            if (!this.teacherVad.silenceStart) {
+                                this.teacherVad.silenceStart = now;
+                            } else if (now - this.teacherVad.silenceStart >= this.vadConfig.silenceDuration) {
+                                // Silence exceeded threshold - end segment
+                                const speechDuration = this.teacherVad.silenceStart - (this.teacherVad.speechStart || now);
+                                
+                                if (speechDuration >= this.vadConfig.minSpeechDuration) {
+                                    // Valid speech segment ended - flush pending transcript
+                                    if (this.teacherVad.pendingTranscript.trim()) {
+                                        console.log('[VAD] Flushing segment:', this.teacherVad.pendingTranscript.trim());
+                                        this.broadcastMessage(this.teacherVad.pendingTranscript.trim());
+                                        this.teacherVad.pendingTranscript = '';
+                                    }
+                                }
+                                
+                                this.teacherVad.isSpeaking = false;
+                                this.teacherVad.speechStart = null;
+                                console.log('[VAD] Speech ended');
+                            }
+                        }
+                    }
+                }, this.vadConfig.sampleInterval);
+            }
+
+            /**
+             * Stop teacher VAD monitoring
+             */
+            stopTeacherVad() {
+                if (this.teacherVad.vadInterval) {
+                    clearInterval(this.teacherVad.vadInterval);
+                    this.teacherVad.vadInterval = null;
+                }
+                
+                // Flush any remaining transcript
+                if (this.teacherVad.pendingTranscript.trim()) {
+                    this.broadcastMessage(this.teacherVad.pendingTranscript.trim());
+                    this.teacherVad.pendingTranscript = '';
+                }
+                
+                try {
+                    if (this.teacherVad.audioContext && this.teacherVad.audioContext.state !== 'closed') {
+                        this.teacherVad.audioContext.close();
+                    }
+                } catch (_) {}
+                
+                this.teacherVad.audioContext = null;
+                this.teacherVad.analyser = null;
+                this.teacherVad.isSpeaking = false;
+            }
+
+            /**
+             * Start VAD monitoring for student
+             * @param {MediaStream} stream 
+             */
+            startStudentVad(stream) {
+                const { audioContext, analyser, dataArray } = this.initVadAnalyser(stream);
+                
+                this.student.vad.audioContext = audioContext;
+                this.student.vad.analyser = analyser;
+                this.student.vad.isSpeaking = false;
+                this.student.vad.silenceStart = null;
+                this.student.vad.speechStart = null;
+
+                this.student.vad.vadInterval = setInterval(() => {
+                    const volume = this.getVolumeLevel(analyser, dataArray);
+                    const now = Date.now();
+                    
+                    if (volume > this.vadConfig.silenceThreshold) {
+                        // Voice detected
+                        if (!this.student.vad.isSpeaking) {
+                            this.student.vad.isSpeaking = true;
+                            this.student.vad.speechStart = now;
+                            this.student.vad.silenceStart = null;
+                        }
+                    } else {
+                        // Silence detected
+                        if (this.student.vad.isSpeaking) {
+                            if (!this.student.vad.silenceStart) {
+                                this.student.vad.silenceStart = now;
+                            }
+                        }
+                    }
+                }, this.vadConfig.sampleInterval);
+            }
+
+            /**
+             * Stop student VAD monitoring
+             */
+            stopStudentVad() {
+                if (this.student.vad.vadInterval) {
+                    clearInterval(this.student.vad.vadInterval);
+                    this.student.vad.vadInterval = null;
+                }
+                
+                try {
+                    if (this.student.vad.audioContext && this.student.vad.audioContext.state !== 'closed') {
+                        this.student.vad.audioContext.close();
+                    }
+                } catch (_) {}
+                
+                this.student.vad.audioContext = null;
+                this.student.vad.analyser = null;
+                this.student.vad.isSpeaking = false;
+            }
+
+            /**
+             * Check if student is still speaking (for auto-stop detection)
+             * @returns {boolean}
+             */
+            isStudentCurrentlySpeaking() {
+                if (!this.student.vad.analyser) return true; // Assume speaking if no VAD
+                
+                const now = Date.now();
+                const silenceStart = this.student.vad.silenceStart;
+                
+                // If silence has been going for longer than threshold, not speaking
+                if (silenceStart && (now - silenceStart) >= this.vadConfig.silenceDuration) {
+                    return false;
+                }
+                
+                return true;
+            }
+
+            // ========== End VAD Methods ==========
+
             async toggleMic() {
                 if (this.state.isMicActive) {
                     // STOP
@@ -2173,6 +2401,13 @@
                     try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { }
                 }
 
+                // Get microphone stream for VAD
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.teacherVad.mediaStream = stream;
+                
+                // Start VAD monitoring
+                this.startTeacherVad(stream);
+
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = true;
                 this.recognition.interimResults = true;
@@ -2180,7 +2415,7 @@
                 this.recognition.maxAlternatives = 1;
 
                 this.recognition.onstart = () => {
-                    console.log('Speech recognition started');
+                    console.log('Speech recognition started with VAD');
                 };
 
                 this.recognition.onresult = (event) => {
@@ -2199,12 +2434,21 @@
                     // Live UI Update
                     const ui = document.getElementById('teacher-transcript');
                     if (ui) {
-                        ui.innerText = finalTranscript + interimTranscript;
+                        ui.innerText = (this.teacherVad.pendingTranscript + ' ' + finalTranscript + interimTranscript).trim();
                     }
 
-                    // Broadcast final transcript
+                    // VAD-based segmentation: accumulate transcripts and let VAD decide when to broadcast
                     if (finalTranscript) {
-                        this.broadcastMessage(finalTranscript.trim());
+                        this.teacherVad.pendingTranscript += ' ' + finalTranscript.trim();
+                        this.teacherVad.pendingTranscript = this.teacherVad.pendingTranscript.trim();
+                        
+                        // If VAD detects extended silence, it will broadcast automatically
+                        // But also broadcast immediately if not speaking (silence already detected)
+                        if (!this.teacherVad.isSpeaking && this.teacherVad.pendingTranscript) {
+                            console.log('[VAD] Immediate broadcast (not speaking):', this.teacherVad.pendingTranscript);
+                            this.broadcastMessage(this.teacherVad.pendingTranscript);
+                            this.teacherVad.pendingTranscript = '';
+                        }
                     }
                 };
 
@@ -2230,6 +2474,17 @@
             }
 
             stopWebSpeech() {
+                // Stop VAD monitoring first (will flush pending transcript)
+                this.stopTeacherVad();
+                
+                // Stop media stream tracks
+                try {
+                    if (this.teacherVad.mediaStream) {
+                        this.teacherVad.mediaStream.getTracks().forEach(t => t.stop());
+                        this.teacherVad.mediaStream = null;
+                    }
+                } catch (_) { }
+                
                 try { if (this.recognition) this.recognition.stop(); } catch (_) { }
                 try { if (this.wakeLock) this.wakeLock.release(); } catch (_) { }
 
