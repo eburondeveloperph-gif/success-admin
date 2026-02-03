@@ -215,8 +215,9 @@
                         </div>
                         <h2 class="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">Generate Lesson</h2>
                     </div>
-                    <p class="text-sm md:text-base text-gray-500 font-medium max-w-xl">Explain any topic
-                        sentence-by-sentence to your class with human-like delivery and natural pacing.</p>
+                    <p class="text-sm md:text-base text-gray-500 font-medium max-w-xl">
+                        Sentence-by-sentence broadcast. AI sentences are hard-capped at 15 words.
+                    </p>
                 </div>
 
                 <div class="flex-1 w-full max-w-full mx-auto px-4 py-8 md:py-10 flex flex-col items-center">
@@ -233,42 +234,66 @@
                     </div>
 
                     <div class="w-full space-y-6 md:space-y-10 flex-1">
-                        <label
-                            class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Subject
-                            /
-                            Topic</label>
-
-                        <!-- Presets ScrollView -->
-                        <div class="flex gap-2 mb-3 overflow-x-auto pb-2 custom-scrollbar -mx-1 px-1">
-                            <button onclick="Generator.setTopic('Construction Safety Officer Duties')"
-                                class="whitespace-nowrap px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-sm font-bold transition-colors border border-blue-100/50">
-                                👷 Safety Officer
+                        <!-- Tabs -->
+                        <div class="flex items-center gap-2">
+                            <button id="tab-ai" onclick="Generator.setMode('ai')"
+                                class="px-4 py-2 rounded-full text-sm font-bold border transition-colors">
+                                AI Topic
                             </button>
-                            <button onclick="Generator.setTopic('Proper Harness Usage & Inspection')"
-                                class="whitespace-nowrap px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-full text-sm font-bold transition-colors border border-orange-100/50">
-                                🪝 Harness Safety
-                            </button>
-                            <button onclick="Generator.setTopic('Complete PPE Guidelines')"
-                                class="whitespace-nowrap px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-full text-sm font-bold transition-colors border border-yellow-100/50">
-                                ⛑️ PPE Rules
-                            </button>
-                            <button onclick="Generator.setTopic('Identifying Site Hazards')"
-                                class="whitespace-nowrap px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full text-sm font-bold transition-colors border border-red-100/50">
-                                ⚠️ Site Hazards
-                            </button>
-                            <button onclick="Generator.setTopic('Emergency First Aid Response')"
-                                class="whitespace-nowrap px-4 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-full text-sm font-bold transition-colors border border-green-100/50">
-                                🚑 First Aid
+                            <button id="tab-story" onclick="Generator.setMode('story')"
+                                class="px-4 py-2 rounded-full text-sm font-bold border transition-colors">
+                                Story
                             </button>
                         </div>
 
-                        <textarea id="topic-input" rows="4"
-                            class="input-apple w-full px-5 py-4 md:px-7 md:py-6 text-gray-900 outline-none placeholder:text-gray-300 resize-none text-[16px] md:text-[18px]"
-                            placeholder="e.g. How photosynthesis works, or the history of the Roman Empire..."></textarea>
+                        <!-- AI Panel -->
+                        <div id="panel-ai" class="space-y-4 md:space-y-6">
+                            <label
+                                class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Subject
+                                / Topic</label>
+
+                            <!-- Presets ScrollView -->
+                            <div class="flex gap-2 mb-3 overflow-x-auto pb-2 custom-scrollbar -mx-1 px-1">
+                                <button onclick="Generator.setTopic('Construction Safety Officer Duties')"
+                                    class="whitespace-nowrap px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-sm font-bold transition-colors border border-blue-100/50">
+                                    👷 Safety Officer
+                                </button>
+                                <button onclick="Generator.setTopic('Proper Harness Usage & Inspection')"
+                                    class="whitespace-nowrap px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-full text-sm font-bold transition-colors border border-orange-100/50">
+                                    🪝 Harness Safety
+                                </button>
+                                <button onclick="Generator.setTopic('Complete PPE Guidelines')"
+                                    class="whitespace-nowrap px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-full text-sm font-bold transition-colors border border-yellow-100/50">
+                                    ⛑️ PPE Rules
+                                </button>
+                                <button onclick="Generator.setTopic('Identifying Site Hazards')"
+                                    class="whitespace-nowrap px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full text-sm font-bold transition-colors border border-red-100/50">
+                                    ⚠️ Site Hazards
+                                </button>
+                                <button onclick="Generator.setTopic('Emergency First Aid Response')"
+                                    class="whitespace-nowrap px-4 py-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-full text-sm font-bold transition-colors border border-green-100/50">
+                                    🚑 First Aid
+                                </button>
+                            </div>
+
+                            <textarea id="topic-input" rows="4"
+                                class="input-apple w-full px-5 py-4 md:px-7 md:py-6 text-gray-900 outline-none placeholder:text-gray-300 resize-none text-[16px] md:text-[18px]"
+                                placeholder="e.g. How photosynthesis works, or the history of the Roman Empire..."></textarea>
+                        </div>
+
+                        <!-- Story Panel (text input only) -->
+                        <div id="panel-story" class="hidden">
+                            <textarea id="story-input" rows="10"
+                                class="input-apple w-full px-5 py-4 md:px-7 md:py-6 text-gray-900 outline-none placeholder:text-gray-300 resize-none text-[16px] md:text-[18px]"
+                                placeholder="Paste your story here. Chunking uses period '.' only. No rewriting."></textarea>
+                            <p class="text-xs text-gray-500 font-medium mt-2">
+                                Splits strictly on '.' for broadcast chunks. Text is not rewritten.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="flex gap-4 max-w-3xl">
-                        <button id="start-btn" onclick="Generator.start()" title="Generate Lesson"
+                        <button id="start-btn" onclick="Generator.primaryAction()" title="Primary Action"
                             class="flex-1 group relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 p-[2px] shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/50 active:scale-[0.98]">
                             <div
                                 class="relative flex h-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 md:py-5 text-white transition-all group-hover:bg-opacity-90">
@@ -326,9 +351,12 @@
 
         const Generator = {
             isActive: false,
-            queue: [],
+            queue: [], // queue items: { text: string, ssml: string }
             interval: null,
             db: null,
+            wakeLock: null,
+            silentAudio: null,
+            mode: "ai", // "ai" | "story"
             session: JSON.parse(localStorage.getItem('orbit_session') || '{}'),
 
             init() {
@@ -342,11 +370,76 @@
                 window.Generator = this;
 
                 // Initialize QR Code
-                setTimeout(() => {
-                    this.generateQR();
-                }, 500);
+                setTimeout(() => { this.generateQR(); }, 500);
+
+                // Default mode
+                this.setMode(this.mode);
             },
 
+            // =========================
+            // UI: Tabs + Primary Action
+            // =========================
+            setMode(mode) {
+                this.mode = mode;
+
+                const tabAI = document.getElementById("tab-ai");
+                const tabStory = document.getElementById("tab-story");
+                const panelAI = document.getElementById("panel-ai");
+                const panelStory = document.getElementById("panel-story");
+
+                const activeClasses = ["bg-blue-50", "text-blue-700", "border-blue-200"];
+                const idleClasses = ["bg-white", "text-gray-700", "border-gray-200"];
+
+                const applyTab = (btn, active) => {
+                    btn.classList.remove(...activeClasses, ...idleClasses);
+                    btn.classList.add(...(active ? activeClasses : idleClasses));
+                };
+
+                applyTab(tabAI, mode === "ai");
+                applyTab(tabStory, mode === "story");
+
+                panelAI.classList.toggle("hidden", mode !== "ai");
+                panelStory.classList.toggle("hidden", mode !== "story");
+
+                // If idle, refresh the primary button label
+                this.renderPrimaryButton();
+            },
+
+            primaryAction() {
+                if (this.mode === "story") return this.queueStory();
+                return this.start();
+            },
+
+            renderPrimaryButton() {
+                const startBtn = document.getElementById('start-btn');
+                if (!startBtn) return;
+
+                // If we're not in idle (button might be hidden/overridden), do nothing here.
+                const isHidden = startBtn.classList.contains("hidden");
+                if (isHidden) return;
+
+                if (this.mode === "story") {
+                    startBtn.title = "Queue Story";
+                    startBtn.innerHTML = `
+                        <div class="relative flex h-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 md:py-5 text-white transition-all group-hover:bg-opacity-90">
+                            <i class="fa-solid fa-scissors text-xl drop-shadow-sm"></i>
+                            <span class="text-sm md:text-base font-black tracking-widest uppercase text-white drop-shadow-sm">Queue Story</span>
+                        </div>
+                    `;
+                } else {
+                    startBtn.title = "Generate Lesson";
+                    startBtn.innerHTML = `
+                        <div class="relative flex h-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 md:py-5 text-white transition-all group-hover:bg-opacity-90">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xl drop-shadow-sm"></i>
+                            <span class="text-sm md:text-base font-black tracking-widest uppercase text-white drop-shadow-sm">Generate Lesson</span>
+                        </div>
+                    `;
+                }
+            },
+
+            // =========================
+            // QR + Room
+            // =========================
             generateQR() {
                 const studentUrl = window.location.href.replace('teacher-ai.html', 'index.html') + '?room=' + this.session.room;
                 const qrContainer = document.getElementById("qrcode");
@@ -384,9 +477,64 @@
                 });
             },
 
+            // =========================
+            // STORY: split by period ONLY
+            // =========================
+            splitStoryByPeriod(text) {
+                const chunks = [];
+                let start = 0;
+
+                for (let i = 0; i < text.length; i++) {
+                    if (text[i] === '.') {
+                        chunks.push(text.slice(start, i + 1)); // include the period
+                        start = i + 1;
+                    }
+                }
+                if (start < text.length) chunks.push(text.slice(start));
+
+                // keep original content; only remove pure-whitespace chunks
+                return chunks.filter(c => c.replace(/\s/g, '').length > 0);
+            },
+
+            escapeForSSML(raw) {
+                // Preserve visible text by storing raw in `text`, and only escape inside `ssml`.
+                // This prevents UI text from changing (no &amp; showing).
+                return raw
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&apos;");
+            },
+
+            // If AI violates the 15-word rule, hard-split without rewriting characters.
+            splitTextByMaxWordsPreserve(text, maxWords) {
+                const words = [...text.matchAll(/\S+/g)];
+                if (words.length <= maxWords) return [text];
+
+                const parts = [];
+                let cursor = 0;
+
+                for (let i = 0; i < words.length; i += maxWords) {
+                    const nextWord = words[i + maxWords];
+                    const cutEnd = nextWord ? nextWord.index : text.length;
+                    parts.push(text.slice(cursor, cutEnd));
+                    cursor = cutEnd;
+                }
+                return parts.filter(p => p.replace(/\s/g, '').length > 0);
+            },
+
+            countWords(text) {
+                const m = text.match(/\S+/g);
+                return m ? m.length : 0;
+            },
+
+            // =========================
+            // AI: start -> generate -> segment into <=15 word sentences
+            // =========================
             async start() {
                 const input = document.getElementById('topic-input');
-                const topic = input.value.trim();
+                const topic = (input?.value || "").trim();
                 if (!topic) return;
 
                 this.isActive = true;
@@ -395,17 +543,86 @@
 
                 try {
                     const response = await this.callAI(topic);
-                    const ssmlBlock = response.choices[0].message.content;
-                    const sentences = this.splitSSML(ssmlBlock);
+                    const ssmlBlock = response.choices?.[0]?.message?.content || "";
+                    const queue = this.segmentSSMLToQueue(ssmlBlock);
 
-                    this.queue = sentences;
-                    this.log(`Generation complete! ${sentences.length} sentences ready.`, "success");
+                    this.queue = queue;
+                    this.log(`Generation complete! ${queue.length} sentences ready.`, "success");
                     this.updateUI('ready');
 
                 } catch (e) {
                     this.log("Error: " + e.message, "error");
                     this.stop();
                 }
+            },
+
+            queueStory() {
+                const input = document.getElementById('story-input');
+                const story = input ? input.value : "";
+                if (!story.trim()) return;
+
+                this.isActive = true;
+                this.updateUI('generating');
+                this.log("Chunking story by periods (.) with zero rewriting...", "info");
+
+                try {
+                    const chunks = this.splitStoryByPeriod(story);
+
+                    this.queue = chunks.map(chunk => {
+                        const ssml = `<speak>${this.escapeForSSML(chunk)}</speak>`;
+                        return { text: chunk, ssml };
+                    });
+
+                    this.log(`Story queued! ${this.queue.length} chunks ready.`, "success");
+                    this.updateUI('ready');
+                } catch (e) {
+                    this.log("Story chunk error: " + e.message, "error");
+                    this.stop();
+                }
+            },
+
+            segmentSSMLToQueue(ssml) {
+                // Remove outer <speak> tags if present
+                let content = (ssml || "").replace(/<\/?speak[^>]*>/gi, '').trim();
+                if (!content) return [];
+
+                // Prefer <s> sentence tags (we enforce this in the prompt)
+                const sMatches = content.match(/<s[^>]*>[\s\S]*?<\/s>/gi);
+                let segments = [];
+
+                if (sMatches && sMatches.length) {
+                    segments = sMatches.map(s => s.trim()).filter(Boolean);
+                } else {
+                    // Fallback: split by punctuation boundaries
+                    segments = content.split(/(?<=[.!?])\s+(?![^<]*>)/g).map(s => s.trim()).filter(Boolean);
+                }
+
+                const queue = [];
+
+                for (const seg of segments) {
+                    const wrapped = `<speak>${seg}</speak>`;
+                    const text = seg.replace(/<[^>]*>/g, '').trim();
+                    if (!text) continue;
+
+                    const wc = this.countWords(text);
+
+                    // Hard guarantee <=15 words per chunk
+                    if (wc > 15) {
+                        this.log(`AI sentence exceeded 15 words (${wc}). Hard-splitting.`, "warning");
+
+                        const parts = this.splitTextByMaxWordsPreserve(text, 15);
+                        for (const part of parts) {
+                            queue.push({
+                                text: part,
+                                ssml: `<speak>${this.escapeForSSML(part)}</speak>`
+                            });
+                        }
+                    } else {
+                        queue.push({ text, ssml: wrapped });
+                    }
+                }
+
+                return queue;
             },
 
             startBroadcast() {
@@ -426,59 +643,60 @@
                 this.queue = [];
                 this.releaseKeepAlive();
                 this.updateUI('idle');
-                this.log("Lesson stopped.", "warning");
+                this.log("Broadcast stopped.", "warning");
             },
 
             async callAI(topic) {
                 const systemPrompt = `You are "LiveClass Composer": a well-researched expert teacher who speaks naturally, but writes in a translation-stable way.
 
 GOAL
-Generate spoken teaching text for a live class or tutorial based on a structured request. The output must sound human and engaging, yet be easy to translate without meaning drift.
+Generate spoken teaching text for a live class or tutorial based on a structured request.
 
-OUTPUT
-Return ONLY raw string of valid SSML (no JSON, no headings, no bullet points, no preamble).
-Use short paragraphs (1–2 sentences each). Keep the cadence like a real teacher.
+OUTPUT (STRICT)
+Return ONLY valid SSML. No JSON. No headings. No bullet points. No preamble.
+Wrap everything in ONE <speak>...</speak>.
+Wrap EVERY sentence in <s>...</s>.
+Each <s> must contain exactly ONE sentence.
+
+CRITICAL LENGTH RULE (NON-NEGOTIABLE)
+- EVERY sentence must be 15 words MAXIMUM.
+- Count words as space-separated tokens.
+- If a sentence would exceed 15 words, rewrite it shorter (do NOT continue long).
+
+NO CENSORING (STRICT)
+- Do NOT mask words. No asterisks. No "bleep". No partial redactions.
+- If a word is used, output it verbatim.
 
 TRANSLATION-STABLE WRITING RULES (NON-NEGOTIABLE)
-1) NO idioms, NO puns, NO culture-specific sayings, NO metaphors that require interpretation.
-2) Prefer concrete nouns over pronouns (repeat the noun if needed). Avoid unclear “it/they/this/that”.
-3) Keep sentences short (8–18 words). One idea per sentence.
-4) Avoid sarcasm that relies on tone. If humor is used, make it explicit and literal.
-5) Keep technical terms consistent. Do not rename the same concept later.
-6) Keep numbers, units, and proper nouns unchanged.
-7) If you add a joke, it must still be literally correct when translated.
+1) NO idioms, NO puns, NO metaphors that require interpretation.
+2) Prefer concrete nouns over pronouns. Avoid vague “it/they/this/that”.
+3) One idea per sentence.
+4) Keep technical terms consistent. Do not rename the same concept later.
+5) Keep numbers, units, and proper nouns unchanged.
 
-CARTESIA SSML RULES (STRICT & CRITICAL)
-- Output MUST be valid SSML only.
+CARTESIA SSML RULES (STRICT)
 - Use <break time="300ms"/> to <break time="800ms"/> for natural thinking pauses.
-- Do NOT describe emotions in text — express them through pacing and delivery.
-- Do NOT include explanations about SSML.
+- Put any <break/> inside the SAME <s> sentence it belongs to, usually at the end.
+- Occasional word repetition is allowed, but still respect 15-word max.
+- Keep fillers rare (max 6 total): “um”, “uh”, “okay”, “right”, in the target language.
 - Do NOT include markdown, code fences, or metadata.
-- Wrap everything in a single <speak> tag.
-- Vary sentence length: some short, some flowing to sound human.
-- Occasionally repeat a word once for realism (e.g., “so, so this part is important”).
-- Use light verbal fillers appropriate to the target language (e.g., “uh”, “um”).
 
 LANGUAGE LOCK (CRITICAL)
-- The variable TEACHER_LANGUAGE defines your language.
+- TEACHER_LANGUAGE defines your language.
 - Every word, filler, hesitation, and explanation MUST be in ${this.session.lang || 'English'}.
 - If TEACHER_LANGUAGE = Dutch (nl-BE), you speak natural Belgian Dutch.
 - If TEACHER_LANGUAGE = English, you speak natural conversational English.
 - Never mix languages unless that language itself is mixed.
 
-STRUCTURE
+STRUCTURE (ALL SENTENCES MUST FOLLOW 15-WORD MAX)
 1) Hook (2 sentences)
 2) Core explanation (6–10 sentences)
 3) One brief student question moment (literal pattern: "Okay, quick question from a student: <question>.")
 4) Practical example (3–5 sentences)
 5) Wrap-up + invitation for questions (2–3 sentences)
 
-SAFETY / TONE
-Keep it classroom-safe. No explicit sexual content. No self-harm content. No hate. No illegal instructions.
-
-QUALITY BAR
-Sound like a real teacher thinking aloud: allow small fillers like “um”, “okay”, “right”, but keep them rare (max 6 total).
-Be specific, accurate, and clear.`;
+SAFETY (MINIMUM)
+No explicit sexual content. No self-harm content. No hate. No illegal instructions.`;
 
                 const res = await fetch(CONFIG.MOONSHOT_URL, {
                     method: "POST",
@@ -528,21 +746,6 @@ Be specific, accurate, and clear.`;
                 }
             },
 
-            splitSSML(ssml) {
-                // Remove outer <speak> tags if present to split content
-                let content = ssml.replace(/<\/?speak>/g, '').trim();
-
-                // Split by common sentence endings, but try to keep <break/> tags attached to previous sentence
-                // We'll use a regex that matches sentence endings followed by whitespace or end of string, 
-                // but doesn't split if it's part of a tag (very basic heuristic)
-                const segments = content.split(/(?<=[.!?])\s+(?![^<]*>)/g);
-
-                return segments.filter(s => s.trim().length > 0).map(s => {
-                    // Wrap back in speak tag
-                    return `<speak>${s.trim()}</speak>`;
-                });
-            },
-
             runLoop() {
                 if (this.interval) clearInterval(this.interval);
 
@@ -558,48 +761,45 @@ Be specific, accurate, and clear.`;
                         return;
                     }
 
-                    const sentence = this.queue.shift();
-                    this.broadcast(sentence);
+                    const item = this.queue.shift(); // {text, ssml}
+                    this.broadcast(item);
 
-                    // Recursive call for next sentence
+                    // Recursive call for next chunk
                     this.runLoop();
                 }, delay);
             },
 
-            broadcast(ssml) {
-                // Strip tags for display text
-                const text = ssml.replace(/<[^>]*>/g, '').trim();
+            broadcast(item) {
+                const payload = (typeof item === "string")
+                    ? { ssml: item, text: item.replace(/<[^>]*>/g, '').trim() }
+                    : item;
 
                 push(ref(this.db, `chats/${this.session.room}/messages`), {
-                    text: text,
-                    ssml: ssml, // Send the full SSML for TTS
+                    text: payload.text,       // EXACT visible text (story stays unchanged)
+                    ssml: payload.ssml,       // SSML for TTS
                     lang: this.session.lang,
                     senderName: "AI Teacher",
                     senderId: "ai-generator",
                     timestamp: Date.now()
                 });
 
-                this.logLatency(`Sent: ${text.substring(0, 20)}...`);
-                this.logLatency(`Sent: ${text.substring(0, 20)}...`);
-                this.log(`Sent: ${text.substring(0, 50)}...`, "info");
+                this.logLatency(`Sent: ${payload.text.substring(0, 20)}...`);
+                this.logLatency(`Sent: ${payload.text.substring(0, 20)}...`);
+                this.log(`Sent: ${payload.text.substring(0, 50)}...`, "info");
             },
 
             logLatency(msg) {
                 const now = new Date();
                 const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
                 const logEl = document.getElementById('latency-log');
+                if (!logEl) return;
+
                 const entry = document.createElement('span');
                 entry.innerText = `[${time}] ${msg}`;
                 entry.className = "opacity-80 border-r border-white/20 pr-2 mr-2";
 
-                // Prepend to show latest first? Or Append? User said "monitor latency... the moment it sends". 
-                // Horizontal scroll usually implies append if reading left-to-right.
                 logEl.appendChild(entry);
-
-                // Auto scroll to end
                 logEl.scrollLeft = logEl.scrollWidth;
-
-                // Limit items
                 if (logEl.children.length > 50) logEl.firstChild.remove();
             },
 
@@ -609,7 +809,8 @@ Be specific, accurate, and clear.`;
                 const stopBtn = document.getElementById('stop-btn');
                 const statusBadge = document.getElementById('status-badge');
                 const statusText = document.getElementById('status-text');
-                const input = document.getElementById('topic-input');
+                const topicInput = document.getElementById('topic-input');
+                const storyInput = document.getElementById('story-input');
                 const visualizer = statusBadge.querySelector('.visualizer');
 
                 // Helper to set badge style
@@ -639,7 +840,8 @@ Be specific, accurate, and clear.`;
                         startBtn.disabled = true;
                         startBtn.classList.add('opacity-50', 'cursor-not-allowed');
                         startBtn.innerHTML = '<div class="relative flex h-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 md:py-5 text-white transition-all"><i class="fa-solid fa-circle-notch fa-spin text-xl"></i><span class="text-sm md:text-base font-black tracking-widest uppercase">Planning...</span></div>';
-                        input.disabled = true;
+                        if (topicInput) topicInput.disabled = true;
+                        if (storyInput) storyInput.disabled = true;
                         setBadge('idle');
                         break;
 
@@ -647,7 +849,8 @@ Be specific, accurate, and clear.`;
                         startBtn.classList.add('hidden');
                         broadcastBtn.classList.remove('hidden');
                         stopBtn.classList.add('hidden');
-                        input.disabled = true;
+                        if (topicInput) topicInput.disabled = true;
+                        if (storyInput) storyInput.disabled = true;
                         this.log("Review correct? Click BROADCAST to start.", "info");
                         setBadge('idle');
                         break;
@@ -656,7 +859,8 @@ Be specific, accurate, and clear.`;
                         startBtn.classList.add('hidden');
                         broadcastBtn.classList.add('hidden');
                         stopBtn.classList.remove('hidden');
-                        input.disabled = true;
+                        if (topicInput) topicInput.disabled = true;
+                        if (storyInput) storyInput.disabled = true;
                         setBadge('live');
                         break;
 
@@ -666,27 +870,14 @@ Be specific, accurate, and clear.`;
                         stopBtn.classList.add('hidden');
                         startBtn.disabled = false;
                         startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                        startBtn.innerHTML = '<div class="relative flex h-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-4 md:py-5 text-white transition-all group-hover:bg-opacity-90"><i class="fa-solid fa-wand-magic-sparkles text-xl drop-shadow-sm"></i><span class="text-sm md:text-base font-black tracking-widest uppercase text-white drop-shadow-sm">Generate Lesson</span></div>';
-                        input.disabled = false;
+                        if (topicInput) topicInput.disabled = false;
+                        if (storyInput) storyInput.disabled = false;
                         setBadge('idle');
+
+                        // Re-render primary button label based on tab
+                        this.renderPrimaryButton();
                 }
             },
-
-            logLatency(msg) {
-                const now = new Date();
-                const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-                const logEl = document.getElementById('latency-log');
-                if (!logEl) return;
-
-                const entry = document.createElement('span');
-                entry.innerText = `[${time}] ${msg}`;
-                entry.className = "opacity-80 border-r border-white/20 pr-2 mr-2";
-
-                logEl.appendChild(entry);
-                logEl.scrollLeft = logEl.scrollWidth;
-                if (logEl.children.length > 50) logEl.firstChild.remove();
-            },
-
 
             log(msg, type) {
                 const div = document.createElement('div');
@@ -703,6 +894,7 @@ Be specific, accurate, and clear.`;
 
         Generator.init();
     </script>
+
     <!-- Latency Monitor Log -->
     <div id="latency-log"
         class="fixed bottom-0 left-0 w-full h-auto max-h-[24px] bg-black/90 text-green-400 text-[8px] font-mono leading-none flex items-center gap-4 px-2 overflow-x-auto whitespace-nowrap z-[9999] pointer-events-none">
