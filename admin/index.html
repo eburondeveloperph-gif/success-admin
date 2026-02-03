@@ -200,11 +200,17 @@
                 <h2 class="text-lg font-bold text-gray-800">
                     <i class="fas fa-door-open text-indigo-600 mr-2"></i>Room Activity
                 </h2>
-                <div class="flex items-center gap-3">
-                    <label class="text-sm font-medium text-gray-600">Filter by Date:</label>
-                    <input type="date" id="room-date-filter" onchange="filterRoomsByDate()" class="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-600">From:</label>
+                        <input type="date" id="room-date-from" onchange="filterRoomsByDateRange()" title="Start date" class="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-medium text-gray-600">To:</label>
+                        <input type="date" id="room-date-to" onchange="filterRoomsByDateRange()" title="End date" class="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                    </div>
                     <button onclick="clearDateFilter()" class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition" title="Clear filter">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times"></i> Clear
                     </button>
                 </div>
             </div>
@@ -770,23 +776,32 @@
         }
 
         // Render rooms table
-        function renderRooms(chats, filterDate = null) {
+        function renderRooms(chats, fromDate = null, toDate = null) {
             const tbody = document.getElementById('rooms-table-body');
             
-            // Filter by date if provided
+            // Filter by date range if provided
             let filteredChats = chats;
-            if (filterDate) {
-                const filterDateStart = new Date(filterDate);
-                filterDateStart.setHours(0, 0, 0, 0);
-                const filterDateEnd = new Date(filterDate);
-                filterDateEnd.setHours(23, 59, 59, 999);
-                
+            if (fromDate || toDate) {
                 filteredChats = {};
                 for (const [roomCode, room] of Object.entries(chats)) {
                     const createdAt = room.meta?.createdAt;
                     if (createdAt) {
                         const roomDate = new Date(createdAt);
-                        if (roomDate >= filterDateStart && roomDate <= filterDateEnd) {
+                        roomDate.setHours(0, 0, 0, 0);
+                        
+                        let include = true;
+                        if (fromDate) {
+                            const fromDateObj = new Date(fromDate);
+                            fromDateObj.setHours(0, 0, 0, 0);
+                            if (roomDate < fromDateObj) include = false;
+                        }
+                        if (toDate) {
+                            const toDateObj = new Date(toDate);
+                            toDateObj.setHours(23, 59, 59, 999);
+                            if (roomDate > toDateObj) include = false;
+                        }
+                        
+                        if (include) {
                             filteredChats[roomCode] = room;
                         }
                     }
@@ -798,14 +813,21 @@
                     <tr>
                         <td colspan="6" class="px-6 py-12 text-center text-gray-400">
                             <i class="fas fa-door-open text-4xl mb-3"></i>
-                            <p>${filterDate ? 'No rooms found for selected date.' : 'No rooms created yet.'}</p>
+                            <p>${(fromDate || toDate) ? 'No rooms found for selected date range.' : 'No rooms created yet.'}</p>
                         </td>
                     </tr>
                 `;
                 return;
             }
             
-            tbody.innerHTML = Object.entries(filteredChats).map(([roomCode, room]) => {
+            // Sort by created date (newest first)
+            const sortedChats = Object.entries(filteredChats).sort((a, b) => {
+                const dateA = a[1].meta?.createdAt || 0;
+                const dateB = b[1].meta?.createdAt || 0;
+                return dateB - dateA;
+            });
+            
+            tbody.innerHTML = sortedChats.map(([roomCode, room]) => {
                 const meta = room.meta || {};
                 const msgCount = room.messages ? Object.keys(room.messages).length : 0;
                 const qCount = room.questions ? Object.keys(room.questions).length : 0;
@@ -826,19 +848,23 @@
             }).join('');
         }
 
-        // Filter rooms by selected date
+        // Filter rooms by date range
+        function filterRoomsByDateRange() {
+            const fromDate = document.getElementById('room-date-from').value;
+            const toDate = document.getElementById('room-date-to').value;
+            renderRooms(allRoomsData, fromDate || null, toDate || null);
+        }
+
+        // Filter rooms by selected date (legacy - kept for compatibility)
         function filterRoomsByDate() {
-            const dateInput = document.getElementById('room-date-filter');
-            const selectedDate = dateInput.value;
-            if (selectedDate) {
-                renderRooms(allRoomsData, selectedDate);
-            }
+            filterRoomsByDateRange();
         }
 
         // Clear date filter
         function clearDateFilter() {
-            document.getElementById('room-date-filter').value = '';
-            renderRooms(allRoomsData, null);
+            document.getElementById('room-date-from').value = '';
+            document.getElementById('room-date-to').value = '';
+            renderRooms(allRoomsData, null, null);
         }
 
         // =====================
