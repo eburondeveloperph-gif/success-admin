@@ -579,7 +579,7 @@
 
         // --- CREDENTIALS ---
         const CREDENTIALS = {
-            DEEPGRAM: "11ee938d032ce7c36c6fa82338274be5e4ada847",
+            DEEPGRAM: "eba02cb3205eae28912c2fe725f75c1014c79280",
             CARTESIA: "sk_car_yWEX9Mp2LwKju8FXyosGhj",
             CARTESIA_VOICES: {
                 "en": "cbaf8084-f009-4838-a096-07ee2e6612b1", // Cathy
@@ -1370,13 +1370,15 @@
                     // Start Deepgram live
                     this.student.dgClient = createClient(CREDENTIALS.DEEPGRAM);
                     this.student.dgSocket = this.student.dgClient.listen.live({
-                        model: "raptor-mini",
-                        language: (this.state.lang || 'en').split('-')[0],
+                        model: "nova-3",
+                        language: "multi", // Multi-language detection
                         smart_format: true,
-                        punctuate: false, // Disable periods to prevent ok/okey sentence breaks
+                        punctuate: true,
                         interim_results: true,
-                        endpointing: 250,
-                        utterance_end_ms: 1000
+                        endpointing: 10, // Optimized endpointing
+                        utterance_end_ms: 1000,
+                        encoding: "linear16",
+                        sample_rate: 16000
                     });
 
                     await new Promise((resolve, reject) => {
@@ -2187,13 +2189,15 @@
 
                 this.dgClient = createClient(CREDENTIALS.DEEPGRAM);
                 this.dgSocket = this.dgClient.listen.live({
-                    model: "raptor-mini",
-                    language: this.state.lang.split('-')[0], // Handle en-US etc
+                    model: "nova-3",
+                    language: "multi", // Multi-language detection
                     smart_format: true,
-                    punctuate: false, // Disable periods to prevent ok/okey sentence breaks
+                    punctuate: true,
                     interim_results: true,
-                    endpointing: 250, // Ultra-fast endpointing for 1.5s latency target
-                    utterance_end_ms: 1000
+                    endpointing: 10, // Optimized endpointing
+                    utterance_end_ms: 1000,
+                    encoding: "linear16",
+                    sample_rate: 16000
                 });
 
                 this.dgSocket.on(LiveTranscriptionEvents.Open, () => {
