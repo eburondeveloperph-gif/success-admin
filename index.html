@@ -830,10 +830,6 @@
                 // Teacher Web Speech API
                 this.recognition = null;
                 this.wakeLock = null;
-                this.teacherVadStream = null;
-                this.teacherVadStop = null;
-                this.teacherVadState = { active: false, lastVoiceAt: 0 };
-                this.teacherLastFinal = '';
 
                 // Student mic/request flow state
                 this.student = {
@@ -849,10 +845,7 @@
                     mediaStream: null,
                     audioChunks: [],
                     finalParts: [],
-                    lastInterim: '',
-                    lastFinalSegment: '',
-                    vadStop: null,
-                    vadState: { active: false, lastVoiceAt: 0 }
+                    lastInterim: ''
                 };
 
                 this.bindAll();
@@ -1360,17 +1353,9 @@
                     // Reset capture buffers
                     this.student.finalParts = [];
                     this.student.lastInterim = '';
-                    this.student.lastFinalSegment = '';
 
                     // Start media stream for audio recording
                     this.student.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                    // VAD for student speech
-                    if (this.student.vadStop) {
-                        try { this.student.vadStop(); } catch (_) { }
-                    }
-                    this.student.vadState = { active: false, lastVoiceAt: 0 };
-                    this.student.vadStop = this.startVAD(this.student.mediaStream, this.student.vadState);
 
                     // Wake Lock (best-effort)
                     if ('wakeLock' in navigator) {
@@ -1413,11 +1398,7 @@
                         this.student.lastInterim = interimTranscript;
 
                         if (finalTranscript) {
-                            const cleaned = finalTranscript.trim();
-                            if (cleaned && cleaned !== this.student.lastFinalSegment && this.hasRecentVoice(this.student.vadState, 2000)) {
-                                this.student.finalParts.push(cleaned);
-                                this.student.lastFinalSegment = cleaned;
-                            }
+                            this.student.finalParts.push(finalTranscript.trim());
                         }
                     };
 
@@ -1462,11 +1443,6 @@
                 try { if (this.wakeLock) await this.wakeLock.release(); } catch (_) { }
                 this.wakeLock = null;
 
-                // Stop VAD
-                try { if (this.student.vadStop) this.student.vadStop(); } catch (_) { }
-                this.student.vadStop = null;
-                this.student.vadState = { active: false, lastVoiceAt: 0 };
-
                 // Compose transcript
                 const finalText = (this.student.finalParts.join(' ').trim() || this.student.lastInterim.trim() || '').trim();
 
@@ -1480,7 +1456,6 @@
                 this.student.audioChunks = [];
                 this.student.finalParts = [];
                 this.student.lastInterim = '';
-                this.student.lastFinalSegment = '';
 
                 // If submit requested, push to Firebase
                 if (submit) {
@@ -2198,24 +2173,11 @@
                     try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { }
                 }
 
-                // VAD stream for teacher
-                try {
-                    if (!this.teacherVadStream) {
-                        this.teacherVadStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    }
-                    if (this.teacherVadStop) {
-                        try { this.teacherVadStop(); } catch (_) { }
-                    }
-                    this.teacherVadState = { active: false, lastVoiceAt: 0 };
-                    this.teacherVadStop = this.startVAD(this.teacherVadStream, this.teacherVadState);
-                } catch (_) { }
-
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = true;
                 this.recognition.interimResults = true;
                 this.recognition.lang = this.state.lang || 'en-US';
                 this.recognition.maxAlternatives = 1;
-                this.teacherLastFinal = '';
 
                 this.recognition.onstart = () => {
                     console.log('Speech recognition started');
@@ -2242,15 +2204,7 @@
 
                     // Broadcast final transcript
                     if (finalTranscript) {
-                        const fullFinal = finalTranscript.trim();
-                        let toSend = fullFinal;
-                        if (this.teacherLastFinal && fullFinal.startsWith(this.teacherLastFinal)) {
-                            toSend = fullFinal.slice(this.teacherLastFinal.length).trim();
-                        }
-                        if (toSend && this.hasRecentVoice(this.teacherVadState, 2000)) {
-                            this.broadcastMessage(toSend);
-                        }
-                        this.teacherLastFinal = fullFinal;
+                        this.broadcastMessage(finalTranscript.trim());
                     }
                 };
 
@@ -2278,17 +2232,6 @@
             stopWebSpeech() {
                 try { if (this.recognition) this.recognition.stop(); } catch (_) { }
                 try { if (this.wakeLock) this.wakeLock.release(); } catch (_) { }
-
-                try { if (this.teacherVadStop) this.teacherVadStop(); } catch (_) { }
-                this.teacherVadStop = null;
-                this.teacherVadState = { active: false, lastVoiceAt: 0 };
-                this.teacherLastFinal = '';
-                try {
-                    if (this.teacherVadStream) {
-                        this.teacherVadStream.getTracks().forEach(t => t.stop());
-                    }
-                } catch (_) { }
-                this.teacherVadStream = null;
 
                 this.recognition = null;
             }
@@ -2362,74 +2305,6 @@
                 }
             }
 
-            startVAD(stream, targetState) {
-                if (!stream || !targetState) return null;
-
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtx) return null;
-
-                const audioContext = new AudioCtx();
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
-                const source = audioContext.createMediaStreamSource(stream);
-                source.connect(analyser);
-
-                const data = new Uint8Array(analyser.fftSize);
-                let running = true;
-                const threshold = 0.02;
-
-                const tick = () => {
-                    if (!running) return;
-                    analyser.getByteTimeDomainData(data);
-                    let sum = 0;
-                    for (let i = 0; i < data.length; i++) {
-                        const v = (data[i] - 128) / 128;
-                        sum += v * v;
-                    }
-                    const rms = Math.sqrt(sum / data.length);
-                    const now = Date.now();
-                    if (rms > threshold) {
-                        targetState.active = true;
-                        targetState.lastVoiceAt = now;
-                    }
-                    requestAnimationFrame(tick);
-                };
-
-                tick();
-
-                return () => {
-                    running = false;
-                    try { source.disconnect(); } catch (_) { }
-                    try { analyser.disconnect(); } catch (_) { }
-                    try { audioContext.close(); } catch (_) { }
-                };
-            }
-
-            hasRecentVoice(targetState, windowMs = 1500) {
-                if (!targetState) return false;
-                return Date.now() - (targetState.lastVoiceAt || 0) <= windowMs;
-            }
-
-            splitIntoSentences(text, lang) {
-                if (!text) return [];
-                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-                    try {
-                        const segmenter = new Intl.Segmenter(lang || 'en', { granularity: 'sentence' });
-                        const segments = [];
-                        for (const s of segmenter.segment(text)) {
-                            if (s.segment && s.segment.trim()) segments.push(s.segment.trim());
-                        }
-                        return segments.length ? segments : [text];
-                    } catch (_) { }
-                }
-
-                return text
-                    .replace(/\s+/g, ' ')
-                    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
-                    .map(s => s.trim())
-                    .filter(Boolean);
-            }
-
             // Helper: Remove periods after ok/okay/okey to prevent sentence splitting
             cleanOkeyPeriods(text) {
                 if (!text) return text;
@@ -2453,31 +2328,12 @@
                     // Replace Dutch "okey" variants with standard "okay" for better translation
                     normalizedText = text.replace(/\b(oké|okee|okey|oke)\b/gi, 'okay');
                 }
-
-                // Clean small tokens that break segmentation
-                normalizedText = this.cleanOkeyPeriods(normalizedText);
-
-                const sentences = this.splitIntoSentences(normalizedText, source);
-                if (sentences.length <= 1) {
-                    try {
-                        const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(normalizedText)}`);
-                        const json = await res.json();
-                        return json[0][0][0];
-                    } catch (e) { return text; }
-                }
-
+                
                 try {
-                    const translatedSegments = [];
-                    for (const sentence of sentences) {
-                        if (!sentence.trim()) continue;
-                        const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(sentence)}`);
-                        const json = await res.json();
-                        translatedSegments.push(json[0][0][0]);
-                    }
-                    return translatedSegments.join(' ').replace(/\s+/g, ' ').trim();
-                } catch (e) {
-                    return text;
-                }
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(normalizedText)}`);
+                    const json = await res.json();
+                    return json[0][0][0];
+                } catch (e) { return text; }
             }
 
             copyCode() {
