@@ -85,18 +85,6 @@
             color: #1f2937;
         }
 
-        /* VAD Visualizer Bars */
-        .vad-bar {
-            width: 4px;
-            background-color: #cbd5e1;
-            border-radius: 999px;
-            transition: height 0.1s ease, background-color 0.2s ease;
-            height: 4px;
-        }
-        .vad-bar.active {
-            background-color: #ef4444; /* Red when talking */
-        }
-
         /* Input Reset & Styling */
         .input-glass {
             background: rgba(255, 255, 255, 0.6);
@@ -402,30 +390,25 @@
             </header>
 
             <main class="flex-1 p-4 grid grid-rows-2 gap-4 h-[calc(100%-4rem)]">
-                <!-- Live Transcript Area with VAD Visualizer -->
+                <!-- Live Transcript Area -->
                 <div
                     class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden relative group">
                     <div class="px-4 py-3 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-wave-square text-blue-500"></i> Live Audio (VAD Enabled)
+                            <i class="fa-solid fa-wave-square text-blue-500"></i> Live Audio
                         </h3>
-                        
-                        <!-- VAD Visualizer Meter -->
-                        <div id="vad-meter" class="flex gap-1 h-3 items-end">
-                             <div class="vad-bar"></div>
-                             <div class="vad-bar"></div>
-                             <div class="vad-bar"></div>
-                             <div class="vad-bar"></div>
-                             <div class="vad-bar"></div>
+                        <div id="mic-status" class="flex gap-1">
+                            <div class="w-1 h-3 bg-gray-300 rounded-full animate-pulse"></div>
+                            <div class="w-1 h-3 bg-gray-300 rounded-full animate-pulse" style="animation-delay: 0.1s">
+                            </div>
+                            <div class="w-1 h-3 bg-gray-300 rounded-full animate-pulse" style="animation-delay: 0.2s">
+                            </div>
                         </div>
                     </div>
 
-                    <div id="teacher-transcript-container"
-                        class="flex-1 p-5 overflow-y-auto custom-scrollbar bg-white relative text-xl font-medium leading-relaxed">
-                        <!-- Finalized Buffer -->
-                        <span id="teacher-buffer" class="text-gray-800 transition-all"></span>
-                        <!-- Interim (Gray) -->
-                        <span id="teacher-interim" class="text-gray-300 italic"></span>
+                    <div id="teacher-transcript"
+                        class="flex-1 p-5 overflow-y-auto text-xl font-medium text-gray-400 italic leading-relaxed custom-scrollbar">
+                        Tap the microphone to start broadcasting...
                     </div>
                 </div>
 
@@ -601,6 +584,7 @@
         const SpeechRecognitionEvent = window.SpeechRecognitionEvent || window.webkitSpeechRecognitionEvent;
 
         // --- CREDENTIALS ---
+        // DO NOT REMOVE/CHANGE (fake but represents correct one)
         const CREDENTIALS = {
             CARTESIA: "sk_car_yWEX9Mp2LwKju8FXyosGhj",
             CARTESIA_VOICES: {
@@ -633,18 +617,202 @@
             }
         };
 
+        // ===================== LANGUAGES LIST (UNCHANGED) =====================
         const LANGUAGES = [
             { code: 'nl-BE', name: 'Flemish', flag: '🇧🇪' },
+            { code: 'ab', name: 'Abkhaz', flag: '🇬🇪' },
+            { code: 'ace', name: 'Acehnese', flag: '🇮🇩' },
+            { code: 'ach', name: 'Acholi', flag: '🇺🇬' },
+            { code: 'aa', name: 'Afar', flag: '🇪🇹' },
+            { code: 'af', name: 'Afrikaans', flag: '🇿🇦' },
+            { code: 'sq', name: 'Albanian', flag: '🇦🇱' },
+            { code: 'alu', name: 'Alur', flag: '🇨🇬' },
+            { code: 'am', name: 'Amharic', flag: '🇪🇹' },
+            { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+            { code: 'hy', name: 'Armenian', flag: '🇦🇲' },
+            { code: 'as', name: 'Assamese', flag: '🇮🇳' },
+            { code: 'av', name: 'Avar', flag: '🇷🇺' },
+            { code: 'awa', name: 'Awadhi', flag: '🇮🇳' },
+            { code: 'ay', name: 'Aymara', flag: '🇧🇴' },
+            { code: 'az', name: 'Azerbaijani', flag: '🇦🇿' },
+            { code: 'ban', name: 'Balinese', flag: '🇮🇩' },
+            { code: 'bal', name: 'Baluchi', flag: '🇵🇰' },
+            { code: 'bm', name: 'Bambara', flag: '🇲🇱' },
+            { code: 'bau', name: 'Baoulé', flag: '🇨🇮' },
+            { code: 'ba', name: 'Bashkir', flag: '🇷🇺' },
+            { code: 'eu', name: 'Basque', flag: '🇪🇸' },
+            { code: 'btk', name: 'Batak Karo', flag: '🇮🇩' },
+            { code: 'bts', name: 'Batak Simalungun', flag: '🇮🇩' },
+            { code: 'bbc', name: 'Batak Toba', flag: '🇮🇩' },
+            { code: 'be', name: 'Belarusian', flag: '🇧🇾' },
+            { code: 'bem', name: 'Bemba', flag: '🇿🇲' },
+            { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
+            { code: 'btv', name: 'Betawi', flag: '🇮🇩' },
+            { code: 'bho', name: 'Bhojpuri', flag: '🇮🇳' },
+            { code: 'bik', name: 'Bikol', flag: '🇵🇭' },
+            { code: 'bs', name: 'Bosnian', flag: '🇧🇦' },
+            { code: 'br', name: 'Breton', flag: '🇫🇷' },
+            { code: 'bg', name: 'Bulgarian', flag: '🇧🇬' },
+            { code: 'bua', name: 'Buryat', flag: '🇷🇺' },
+            { code: 'yue', name: 'Cantonese', flag: '🇭🇰' },
+            { code: 'ca', name: 'Catalan', flag: '🇪🇸' },
+            { code: 'ceb', name: 'Cebuano', flag: '🇵🇭' },
+            { code: 'ch', name: 'Chamorro', flag: '🇬🇺' },
+            { code: 'ce', name: 'Chechen', flag: '🇷🇺' },
+            { code: 'ny', name: 'Chichewa', flag: '🇲🇼' },
+            { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+            { code: 'zh-TW', name: 'Chinese (Traditional)', flag: '🇹🇼' },
+            { code: 'chk', name: 'Chuukese', flag: '🇫🇲' },
+            { code: 'cv', name: 'Chuvash', flag: '🇷🇺' },
+            { code: 'co', name: 'Corsican', flag: '🇫🇷' },
+            { code: 'crh', name: 'Crimean Tatar (Latin)', flag: '🇺🇦' },
+            { code: 'hr', name: 'Croatian', flag: '🇭🇷' },
+            { code: 'cs', name: 'Czech', flag: '🇨🇿' },
+            { code: 'da', name: 'Danish', flag: '🇩🇰' },
+            { code: 'prs', name: 'Dari', flag: '🇦🇫' },
+            { code: 'dv', name: 'Dhivehi', flag: '🇲🇻' },
+            { code: 'din', name: 'Dinka', flag: '🇸🇸' },
+            { code: 'doi', name: 'Dogri', flag: '🇮🇳' },
+            { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
+            { code: 'dyu', name: 'Dyula', flag: '🇨🇮' },
+            { code: 'dz', name: 'Dzongkha', flag: '🇧🇹' },
             { code: 'en', name: 'English', flag: '🇺🇸' },
+            { code: 'eo', name: 'Esperanto', flag: '🌍' },
+            { code: 'et', name: 'Estonian', flag: '🇪🇪' },
+            { code: 'ee', name: 'Ewe', flag: '🇬🇭' },
+            { code: 'fo', name: 'Faroese', flag: '🇫🇴' },
+            { code: 'fj', name: 'Fijian', flag: '🇫🇯' },
+            { code: 'fil', name: 'Filipino', flag: '🇵🇭' },
+            { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
+            { code: 'fon', name: 'Fon', flag: '🇧🇯' },
             { code: 'fr', name: 'French', flag: '🇫🇷' },
+            { code: 'fr-CA', name: 'French (Canada)', flag: '🇨🇦' },
+            { code: 'fy', name: 'Frisian', flag: '🇳🇱' },
+            { code: 'fur', name: 'Friulian', flag: '🇮🇹' },
+            { code: 'ff', name: 'Fulani', flag: '🇸🇳' },
+            { code: 'gaa', name: 'Ga', flag: '🇬🇭' },
+            { code: 'gl', name: 'Galician', flag: '🇪🇸' },
+            { code: 'ka', name: 'Georgian', flag: '🇬🇪' },
             { code: 'de', name: 'German', flag: '🇩🇪' },
-            { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+            { code: 'el', name: 'Greek', flag: '🇬🇷' },
+            { code: 'gn', name: 'Guarani', flag: '🇵🇾' },
+            { code: 'gu', name: 'Gujarati', flag: '🇮🇳' },
+            { code: 'ht', name: 'Haitian Creole', flag: '🇭🇹' },
+            { code: 'ccp', name: 'Hakha Chin', flag: '🇲🇲' },
+            { code: 'ha', name: 'Hausa', flag: '🇳🇬' },
+            { code: 'haw', name: 'Hawaiian', flag: '🇺🇸' },
+            { code: 'he', name: 'Hebrew', flag: '🇮🇱' },
+            { code: 'hil', name: 'Hiligaynon', flag: '🇵🇭' },
+            { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+            { code: 'hmn', name: 'Hmong', flag: '🇨🇳' },
+            { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
+            { code: 'iba', name: 'Iban', flag: '🇲🇾' },
+            { code: 'is', name: 'Icelandic', flag: '🇮🇸' },
+            { code: 'ig', name: 'Igbo', flag: '🇳🇬' },
+            { code: 'ilo', name: 'Ilocano', flag: '🇵🇭' },
+            { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
+            { code: 'iu', name: 'Inuktut', flag: '🇨🇦' },
+            { code: 'ga', name: 'Irish', flag: '🇮🇪' },
             { code: 'it', name: 'Italian', flag: '🇮🇹' },
-            { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
-            { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+            { code: 'jam', name: 'Jamaican Patois', flag: '🇯🇲' },
             { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
-            { code: 'ko', name: 'Korean', flag: '🇰🇷' }
+            { code: 'jv', name: 'Javanese', flag: '🇮🇩' },
+            { code: 'kac', name: 'Jingpo', flag: '🇲🇲' },
+            { code: 'kl', name: 'Kalaallisut', flag: '🇬🇱' },
+            { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
+            { code: 'kr', name: 'Kanuri', flag: '🇳🇬' },
+            { code: 'pam', name: 'Kapampangan', flag: '🇵🇭' },
+            { code: 'kk', name: 'Kazakh', flag: '🇰🇿' },
+            { code: 'kha', name: 'Khasi', flag: '🇮🇳' },
+            { code: 'km', name: 'Khmer', flag: '🇰🇭' },
+            { code: 'kg', name: 'Kikongo', flag: '🇨🇬' },
+            { code: 'rw', name: 'Kinyarwanda', flag: '🇷🇼' },
+            { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+            { code: 'kri', name: 'Krio', flag: '🇸🇱' },
+            { code: 'ku', name: 'Kurdish (Kurmanji)', flag: '🇹🇷' },
+            { code: 'ckb', name: 'Kurdish (Sorani)', flag: '🇮🇶' },
+            { code: 'ky', name: 'Kyrgyz', flag: '🇰🇬' },
+            { code: 'lo', name: 'Lao', flag: '🇱🇦' },
+            { code: 'la', name: 'Latin', flag: '🇻🇦' },
+            { code: 'lv', name: 'Latvian', flag: '🇱🇻' },
+            { code: 'ln', name: 'Lingala', flag: '🇨🇩' },
+            { code: 'lt', name: 'Lithuanian', flag: '🇱🇹' },
+            { code: 'lg', name: 'Luganda', flag: '🇺🇬' },
+            { code: 'luo', name: 'Luo', flag: '🇰🇪' },
+            { code: 'lb', name: 'Luxembourgish', flag: '🇱🇺' },
+            { code: 'mk', name: 'Macedonian', flag: '🇲🇰' },
+            { code: 'mad', name: 'Madurese', flag: '🇮🇩' },
+            { code: 'mai', name: 'Maithili', flag: '🇮🇳' },
+            { code: 'mg', name: 'Malagasy', flag: '🇲🇬' },
+            { code: 'ms', name: 'Malay', flag: '🇲🇾' },
+            { code: 'ml', name: 'Malayalam', flag: '🇮🇳' },
+            { code: 'mt', name: 'Maltese', flag: '🇲🇹' },
+            { code: 'gv', name: 'Manx', flag: '🇮🇲' },
+            { code: 'mi', name: 'Maori', flag: '🇳🇿' },
+            { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
+            { code: 'mh', name: 'Marshallese', flag: '🇲🇭' },
+            { code: 'mn', name: 'Mongolian', flag: '🇲🇳' },
+            { code: 'my', name: 'Myanmar (Burmese)', flag: '🇲🇲' },
+            { code: 'ne', name: 'Nepali', flag: '🇳🇵' },
+            { code: 'no', name: 'Norwegian', flag: '🇳🇴' },
+            { code: 'or', name: 'Odia (Oriya)', flag: '🇮🇳' },
+            { code: 'om', name: 'Oromo', flag: '🇪🇹' },
+            { code: 'ps', name: 'Pashto', flag: '🇦🇫' },
+            { code: 'fa', name: 'Persian', flag: '🇮🇷' },
+            { code: 'pl', name: 'Polish', flag: '🇵🇱' },
+            { code: 'pt-BR', name: 'Portuguese (Brazil)', flag: '🇧🇷' },
+            { code: 'pt-PT', name: 'Portuguese (Portugal)', flag: '🇵🇹' },
+            { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
+            { code: 'qu', name: 'Quechua', flag: '🇵🇪' },
+            { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
+            { code: 'rn', name: 'Rundi', flag: '🇧🇮' },
+            { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+            { code: 'sm', name: 'Samoan', flag: '🇼🇸' },
+            { code: 'sg', name: 'Sango', flag: '🇨🇫' },
+            { code: 'sa', name: 'Sanskrit', flag: '🇮🇳' },
+            { code: 'gd', name: 'Scots Gaelic', flag: '🏴' },
+            { code: 'nso', name: 'Sepedi', flag: '🇿🇦' },
+            { code: 'sr', name: 'Serbian', flag: '🇷🇸' },
+            { code: 'st', name: 'Sesotho', flag: '🇿🇦' },
+            { code: 'sn', name: 'Shona', flag: '🇿🇼' },
+            { code: 'sd', name: 'Sindhi', flag: '🇵🇰' },
+            { code: 'si', name: 'Sinhala', flag: '🇱🇰' },
+            { code: 'sk', name: 'Slovak', flag: '🇸🇰' },
+            { code: 'sl', name: 'Slovenian', flag: '🇸🇮' },
+            { code: 'so', name: 'Somali', flag: '🇸🇴' },
+            { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+            { code: 'su', name: 'Sundanese', flag: '🇮🇩' },
+            { code: 'sw', name: 'Swahili', flag: '🇰🇪' },
+            { code: 'ss', name: 'Swati', flag: '🇸🇿' },
+            { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
+            { code: 'ty', name: 'Tahitian', flag: '🇵🇫' },
+            { code: 'tg', name: 'Tajik', flag: '🇹🇯' },
+            { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+            { code: 'tt', name: 'Tatar', flag: '🇷🇺' },
+            { code: 'te', name: 'Telugu', flag: '🇮🇳' },
+            { code: 'th', name: 'Thai', flag: '🇹🇭' },
+            { code: 'bo', name: 'Tibetan', flag: '🇨🇳' },
+            { code: 'ti', name: 'Tigrinya', flag: '🇪🇷' },
+            { code: 'to', name: 'Tongan', flag: '🇹🇴' },
+            { code: 'ts', name: 'Tsonga', flag: '🇿🇦' },
+            { code: 'tn', name: 'Tswana', flag: '🇿🇦' },
+            { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+            { code: 'tk', name: 'Turkmen', flag: '🇹🇲' },
+            { code: 'ak', name: 'Twi', flag: '🇬🇭' },
+            { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
+            { code: 'ur', name: 'Urdu', flag: '🇵🇰' },
+            { code: 'ug', name: 'Uyghur', flag: '🇨🇳' },
+            { code: 'uz', name: 'Uzbek', flag: '🇺🇿' },
+            { code: 've', name: 'Venda', flag: '🇿🇦' },
+            { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
+            { code: 'cy', name: 'Welsh', flag: '🏴' },
+            { code: 'wo', name: 'Wolof', flag: '🇸🇳' },
+            { code: 'xh', name: 'Xhosa', flag: '🇿🇦' },
+            { code: 'yi', name: 'Yiddish', flag: '🇮🇱' },
+            { code: 'yo', name: 'Yoruba', flag: '🇳🇬' },
+            { code: 'zu', name: 'Zulu', flag: '🇿🇦' }
         ];
+        // ========================================================================
 
         class SuccesApp {
             constructor() {
@@ -657,24 +825,15 @@
                     name: '',
                     gender: 'Male',
                     lang: 'en',
-                    isMicActive: false,      // teacher mic status
+                    isMicActive: false,      // teacher mic
                     isTTSActive: false,
                     audioQueue: [],
                     isAudioPlaying: false
                 };
 
-                // Teacher Audio State (VAD)
-                this.teacherAudio = {
-                    recognition: null,
-                    audioContext: null,
-                    analyser: null,
-                    vadInterval: null,
-                    lastVoiceTime: Date.now(),
-                    finalizedBuffer: "", // Completed sentences waiting to be sent
-                    lastSentText: "", // Deduplication check
-                    isSpeaking: false,
-                    wakeLock: null
-                };
+                // Teacher Web Speech API
+                this.recognition = null;
+                this.wakeLock = null;
 
                 // Student mic/request flow state
                 this.student = {
@@ -692,6 +851,22 @@
                     finalParts: [],
                     lastInterim: ''
                 };
+
+                // ===================== FIX: TEACHER BUFFER (prevents mid-sentence broadcast) =====================
+                this.teacherBuffer = {
+                    text: "",
+                    lastAppendAt: 0,
+                    flushTimer: null
+                };
+
+                // ===================== FIX: DUPLICATION GUARDS + AUDIO ECHO SEPARATION =====================
+                this.teacherFinalSeen = new Map();            // dedupe by resultIndex
+                this.teacherGlobalFinal = { text: "", at: 0 };// dedupe across indices (WebSpeech repeats same final)
+                this.teacherLastBroadcast = { text: "", at: 0 }; // dedupe DB broadcast
+                this.ttsPausedMic = false;                   // true while TTS is playing to avoid mic hearing speaker
+                this.currentAudio = null;                    // ensure single audio player (no overlap)
+                this.currentAudioUrl = null;                 // revoke URL
+                // ================================================================================================
 
                 this.bindAll();
                 this.init();
@@ -727,8 +902,7 @@
                     'sendStudentChat',
                     'approveChatRequest',
                     'switchTeacherTab',
-                    'clearNotifications',
-                    'copyCode'
+                    'clearNotifications'
                 ].forEach(m => this[m] = this[m].bind(this));
             }
 
@@ -793,6 +967,17 @@
                     navigator.serviceWorker.register('./sw.js')
                         .then(reg => console.log('SW registered:', reg.scope))
                         .catch(err => console.log('SW failed:', err));
+                }
+            }
+
+            async requestPermissions() {
+                try {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                    if ('Notification' in window) {
+                        await Notification.requestPermission();
+                    }
+                } catch (e) {
+                    this.showToast("Mic permission required", "error");
                 }
             }
 
@@ -916,206 +1101,110 @@
                 this.switchView('view-teacher');
             }
 
+            // ===================== FIX: AUDIO STOP/SEPARATION HELPERS =====================
+            stopCurrentAudio(clearQueue = false) {
+                try {
+                    if (this.currentAudio) {
+                        try { this.currentAudio.pause(); } catch (_) { }
+                        try { this.currentAudio.src = ""; } catch (_) { }
+                        this.currentAudio = null;
+                    }
+                } catch (_) { }
+
+                try {
+                    if (this.currentAudioUrl) {
+                        URL.revokeObjectURL(this.currentAudioUrl);
+                        this.currentAudioUrl = null;
+                    }
+                } catch (_) { }
+
+                if (clearQueue) this.state.audioQueue = [];
+                this.state.isAudioPlaying = false;
+            }
+
+            // Pause teacher mic while TTS is playing so the mic doesn't "hear" speaker audio.
+            pauseTeacherMicForTTS() {
+                if (this.state.role !== 'teacher') return;
+                if (!this.state.isMicActive) return;
+                if (!this.recognition) return;
+                if (this.ttsPausedMic) return;
+
+                this.ttsPausedMic = true;
+
+                // Prevent auto-restart loops while we intentionally stop it
+                try { this.recognition.onend = null; } catch (_) { }
+                try { this.recognition.stop(); } catch (_) { }
+            }
+
+            resumeTeacherMicAfterTTS() {
+                if (this.state.role !== 'teacher') return;
+                if (!this.ttsPausedMic) return;
+
+                this.ttsPausedMic = false;
+
+                if (!this.state.isMicActive) return;
+
+                setTimeout(() => {
+                    try { this.startWebSpeech(); } catch (_) { }
+                }, 220);
+            }
+            // ============================================================================
+
             async logout() {
                 // Teacher mic cleanup
-                if (this.state.isMicActive) await this.stopTeacherAudio();
+                if (this.state.isMicActive) await this.toggleMic();
 
-                // Student mic cleanup
+                // Student mic cleanup (stop without submitting)
                 if (this.student.recording || this.student.approved) {
                     await this.stopStudentCapture(false);
                 }
+
+                // stop audio hard
+                this.stopCurrentAudio(true);
 
                 this.clearState();
                 this.state.role = null;
                 this.state.room = '';
                 this.state.name = '';
                 this.state.isMicActive = false;
+
+                // Reset student flow
+                this.student.requestPending = false;
+                this.student.approved = false;
+                this.student.recording = false;
+                this.student.approvalKey = null;
+                this.student.chatRequestPending = false;
+                this.student.chatApproved = false;
+
+                // Reset teacher buffer
+                try { this.flushTeacherBuffer(true); } catch (_) { }
+
+                // Reset dedupe maps
+                try { this.teacherFinalSeen.clear(); } catch (_) { }
+                this.teacherGlobalFinal = { text: "", at: 0 };
+                this.teacherLastBroadcast = { text: "", at: 0 };
+                this.ttsPausedMic = false;
+
+                // Redirect to auth page
                 window.location.href = 'auth.html';
             }
 
-            // --- TEACHER AUDIO (VAD + Web Speech) ---
-
-            async toggleMic() {
-                if (this.state.isMicActive) {
-                    this.stopTeacherAudio();
-                    this.updateMicUI(false);
-                } else {
-                    try {
-                        await this.startTeacherAudio();
-                        this.updateMicUI(true);
-                        this.showToast("Mic Active - VAD Enabled", "success");
-                    } catch (e) {
-                        this.showToast("Mic Error: " + e.message, "error");
-                    }
-                }
-            }
-
-            async startTeacherAudio() {
-                this.state.isMicActive = true;
-                
-                // 1. Setup AudioContext for VAD (Voice Activity Detection)
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                this.teacherAudio.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = this.teacherAudio.audioContext.createMediaStreamSource(stream);
-                this.teacherAudio.analyser = this.teacherAudio.audioContext.createAnalyser();
-                this.teacherAudio.analyser.fftSize = 512; // Small buffer for fast reaction
-                source.connect(this.teacherAudio.analyser);
-
-                // Wake Lock
-                if ('wakeLock' in navigator) {
-                     try { this.teacherAudio.wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
-                }
-
-                // 2. Setup Speech Recognition
-                if (!SpeechRecognition) throw new Error("Browser not supported");
-                this.teacherAudio.recognition = new SpeechRecognition();
-                this.teacherAudio.recognition.continuous = true;
-                this.teacherAudio.recognition.interimResults = true;
-                this.teacherAudio.recognition.lang = this.state.lang || 'en-US';
-                
-                this.teacherAudio.recognition.onresult = (event) => {
-                    let interim = "";
-                    let finalChunk = "";
-
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        if (event.results[i].isFinal) {
-                            finalChunk += event.results[i][0].transcript;
-                        } else {
-                            interim += event.results[i][0].transcript;
-                        }
-                    }
-
-                    // Append finalized chunks to our buffer
-                    if (finalChunk) {
-                        const cleaned = finalChunk.trim();
-                        // Prevent instant dupes from API
-                        if (cleaned) {
-                            this.teacherAudio.finalizedBuffer += " " + cleaned;
-                        }
-                    }
-                    
-                    // Update UI
-                    this.updateUIBuffer(interim);
-                };
-
-                this.teacherAudio.recognition.onend = () => {
-                    if (this.state.isMicActive) {
-                         // Restart if stopped unexpectedly
-                        try { this.teacherAudio.recognition.start(); } catch(e){}
-                    }
-                };
-
-                this.teacherAudio.recognition.start();
-
-                // 3. Start VAD Loop
-                this.startVADLoop();
-            }
-
-            stopTeacherAudio() {
-                this.state.isMicActive = false;
-                if (this.teacherAudio.recognition) this.teacherAudio.recognition.stop();
-                if (this.teacherAudio.audioContext) this.teacherAudio.audioContext.close();
-                if (this.teacherAudio.vadInterval) clearInterval(this.teacherAudio.vadInterval);
-                if (this.teacherAudio.wakeLock) this.teacherAudio.wakeLock.release();
-                
-                // Flush remaining text
-                this.flushBuffer();
-            }
-
-            startVADLoop() {
-                const bufferLength = this.teacherAudio.analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                const visualBars = document.querySelectorAll('.vad-bar');
-
-                this.teacherAudio.vadInterval = setInterval(() => {
-                    this.teacherAudio.analyser.getByteFrequencyData(dataArray);
-                    
-                    // Calculate Volume
-                    let sum = 0;
-                    for(let i = 0; i < bufferLength; i++) sum += dataArray[i];
-                    const average = sum / bufferLength;
-
-                    // Visualizer
-                    const normalized = Math.min(100, average * 2); 
-                    visualBars.forEach((bar, idx) => {
-                        bar.style.height = (4 + (normalized * ((idx+1)*0.2))) + 'px';
-                        bar.classList.toggle('active', average > 10);
-                    });
-
-                    // VAD Logic: Threshold = 15
-                    if (average > 15) {
-                        this.teacherAudio.lastVoiceTime = Date.now();
-                        this.teacherAudio.isSpeaking = true;
-                    } else {
-                        // Silence
-                        const timeSinceVoice = Date.now() - this.teacherAudio.lastVoiceTime;
-                        if (timeSinceVoice > 1500 && this.teacherAudio.isSpeaking) {
-                            // 1.5s of silence detected -> End of sentence
-                            this.teacherAudio.isSpeaking = false;
-                            this.flushBuffer();
-                        }
-                    }
-                }, 100);
-            }
-
-            flushBuffer() {
-                const text = this.teacherAudio.finalizedBuffer.trim();
-                if (!text) return;
-                
-                // Anti-Duplication: Don't send if exactly same as last time
-                if (text === this.teacherAudio.lastSentText) {
-                    this.teacherAudio.finalizedBuffer = "";
-                    this.updateUIBuffer();
-                    return;
-                }
-
-                // Send
-                this.broadcastMessage(text);
-                
-                // Reset
-                this.teacherAudio.lastSentText = text;
-                this.teacherAudio.finalizedBuffer = "";
-                this.updateUIBuffer();
-            }
-
-            updateUIBuffer(interim = "") {
-                const bufferEl = document.getElementById('teacher-buffer');
-                const interimEl = document.getElementById('teacher-interim');
-                if (bufferEl) bufferEl.innerText = this.teacherAudio.finalizedBuffer;
-                if (interimEl) interimEl.innerText = interim;
-            }
-
-            updateMicUI(active) {
-                const btn = document.getElementById('mic-btn');
-                if (!btn) return;
-                if (active) {
-                    btn.classList.add('bg-red-500', 'text-white', 'mic-active-ring');
-                    btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
-                } else {
-                    btn.classList.remove('bg-red-500', 'text-white', 'mic-active-ring');
-                    btn.innerHTML = '<i class="fa-solid fa-microphone-slash text-sm"></i>';
-                }
-            }
-
-            broadcastMessage(text) {
-                push(ref(this.db, `chats/${this.state.room}/messages`), {
-                    text: text,
-                    lang: this.state.lang,
-                    senderName: this.state.name,
-                    timestamp: Date.now()
-                });
-            }
-
-            // --- STUDENT MIC LOGIC ---
-
+            // --- STUDENT MIC BUTTON UI ---
             updateStudentMicButton() {
                 const btn = document.getElementById('mic-btn-student');
                 const icon = document.getElementById('mic-icon-student');
                 const label = document.getElementById('mic-label-student');
                 if (!btn || !icon || !label) return;
 
+                // Reset classes
                 btn.disabled = false;
-                btn.className = "btn-modern h-12 px-6 rounded-full font-semibold shadow-lg flex items-center gap-2";
+                btn.classList.remove(
+                    'bg-[#0ea5e9]', 'hover:bg-[#0284c7]',
+                    'bg-amber-500', 'hover:bg-amber-600',
+                    'bg-green-500', 'hover:bg-green-600',
+                    'mic-active-ring-green',
+                    'opacity-70', 'cursor-not-allowed'
+                );
 
                 if (this.state.role !== 'student') {
                     icon.className = "fa-solid fa-microphone-lines";
@@ -1124,36 +1213,78 @@
                 }
 
                 if (this.student.recording) {
-                    btn.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white', 'mic-active-ring-green');
+                    btn.classList.add('bg-green-500', 'hover:bg-green-600', 'mic-active-ring-green');
                     icon.className = "fa-solid fa-microphone";
                     label.textContent = "Stop & Send";
-                } else if (this.student.approved) {
-                    btn.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white', 'mic-active-ring-green');
+                    return;
+                }
+
+                if (this.student.approved) {
+                    btn.classList.add('bg-green-500', 'hover:bg-green-600', 'mic-active-ring-green');
                     icon.className = "fa-solid fa-microphone";
                     label.textContent = "Speaking...";
-                } else if (this.student.requestPending) {
-                    btn.classList.add('bg-amber-500', 'hover:bg-amber-600', 'opacity-70', 'cursor-not-allowed', 'text-white');
+                    return;
+                }
+
+                if (this.student.requestPending) {
+                    btn.classList.add('bg-amber-500', 'hover:bg-amber-600', 'opacity-70', 'cursor-not-allowed');
                     btn.disabled = true;
                     icon.className = "fa-solid fa-hourglass-half";
                     label.textContent = "Requested";
+                    return;
+                }
+
+                btn.classList.add('bg-[#0ea5e9]', 'hover:bg-[#0284c7]');
+                icon.className = "fa-solid fa-microphone-lines";
+                label.textContent = "Request Mic";
+            }
+
+            updateChatControls() {
+                const raiseBtn = document.getElementById('raise-hand-btn');
+                const chatBtn = document.getElementById('chat-btn-student');
+                if (!raiseBtn || !chatBtn) return;
+
+                raiseBtn.disabled = false;
+                chatBtn.disabled = false;
+                raiseBtn.classList.remove('bg-amber-500', 'hover:bg-amber-600', 'opacity-70', 'cursor-not-allowed');
+                chatBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'text-white', 'opacity-60', 'cursor-not-allowed');
+
+                if (this.state.role !== 'student') {
+                    chatBtn.disabled = true;
+                    chatBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                    return;
+                }
+
+                if (this.student.chatApproved) {
+                    chatBtn.classList.add('bg-blue-500', 'hover:bg-blue-600', 'text-white');
                 } else {
-                    btn.classList.add('bg-[#0ea5e9]', 'hover:bg-[#0284c7]', 'text-white');
-                    icon.className = "fa-solid fa-microphone-lines";
-                    label.textContent = "Request Mic";
+                    chatBtn.disabled = true;
+                    chatBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
+
+                if (this.student.chatRequestPending) {
+                    raiseBtn.disabled = true;
+                    raiseBtn.classList.add('bg-amber-500', 'hover:bg-amber-600', 'opacity-70', 'cursor-not-allowed');
                 }
             }
 
+            // --- STUDENT MIC FLOW ---
             async handleStudentMicAction() {
                 if (this.state.role !== 'student' || !this.state.room) return;
 
+                // If currently recording: stop + submit
                 if (this.student.recording) {
                     await this.stopStudentCapture(true);
                     return;
                 }
+
+                // If approved but not recording (rare): start capturing
                 if (this.student.approved && !this.student.recording) {
                     await this.startStudentCapture();
                     return;
                 }
+
+                // Else: send request
                 if (this.student.requestPending) return;
                 await this.sendStudentMicRequest();
             }
@@ -1162,16 +1293,131 @@
                 try {
                     this.student.requestPending = true;
                     this.updateStudentMicButton();
+
                     await push(ref(this.db, `chats/${this.state.room}/requests`), {
                         senderName: this.state.name,
+                        senderId: this.state.name,
                         lang: this.state.lang,
                         timestamp: Date.now()
                     });
+
                     this.showToast("Microphone request sent", "success");
                 } catch (e) {
                     this.student.requestPending = false;
                     this.updateStudentMicButton();
-                    this.showToast("Error: " + e.message, "error");
+                    this.showToast("Failed to send request: " + e.message, "error");
+                }
+            }
+
+            async sendRaiseHandRequest() {
+                if (this.state.role !== 'student' || !this.state.room) return;
+                if (this.student.chatApproved) return this.showToast("Chat already approved", "info");
+                if (this.student.chatRequestPending) return;
+
+                try {
+                    this.student.chatRequestPending = true;
+                    this.updateChatControls();
+
+                    await push(ref(this.db, `chats/${this.state.room}/handRaises`), {
+                        senderName: this.state.name,
+                        senderId: this.state.name,
+                        lang: this.state.lang,
+                        timestamp: Date.now()
+                    });
+
+                    this.showToast("Hand raised", "success");
+                } catch (e) {
+                    this.student.chatRequestPending = false;
+                    this.updateChatControls();
+                    this.showToast("Failed to raise hand: " + e.message, "error");
+                }
+            }
+
+            listenForStudentApproval() {
+                const aRef = ref(this.db, `chats/${this.state.room}/approvedSpeakers`);
+                onChildAdded(aRef, async (snap) => {
+                    if (this.state.role !== 'student') return;
+                    const a = snap.val();
+                    if (!a) return;
+
+                    const speaker = a.speakerName || a.name || '';
+                    if (speaker && speaker === this.state.name) {
+                        // Approve this student
+                        this.student.approved = true;
+                        this.student.requestPending = false;
+                        this.student.approvalKey = snap.key;
+                        this.updateStudentMicButton();
+                        this.showToast("Approved! Mic opened.", "success");
+
+                        // Cleanup approval node (optional, keeps DB tidy)
+                        try { await remove(ref(this.db, `chats/${this.state.room}/approvedSpeakers/${snap.key}`)); } catch (_) { }
+
+                        // Auto open mic (start capture)
+                        await this.startStudentCapture();
+                    }
+                });
+            }
+
+            listenForChatApproval() {
+                const aRef = ref(this.db, `chats/${this.state.room}/approvedChat`);
+                onChildAdded(aRef, async (snap) => {
+                    if (this.state.role !== 'student') return;
+                    const a = snap.val();
+                    if (!a) return;
+
+                    const speaker = a.speakerName || a.name || '';
+                    if (speaker && speaker === this.state.name) {
+                        this.student.chatApproved = true;
+                        this.student.chatRequestPending = false;
+                        this.updateChatControls();
+                        this.showToast("Chat approved", "success");
+
+                        try { await remove(ref(this.db, `chats/${this.state.room}/approvedChat/${snap.key}`)); } catch (_) { }
+                    }
+                });
+            }
+
+            openChatModal() {
+                if (this.state.role !== 'student') return;
+                if (!this.student.chatApproved) {
+                    this.showToast("Raise your hand to chat", "info");
+                    return;
+                }
+                this.toggleModal('chat');
+            }
+
+            async sendStudentChat() {
+                const val = document.getElementById('chat-input')?.value?.trim();
+                if (!val) return;
+                if (!this.student.chatApproved) return this.showToast("Chat not approved yet", "error");
+
+                try {
+                    let teacherLang = null;
+                    try {
+                        const metaSnap = await get(ref(this.db, `chats/${this.state.room}/meta`));
+                        if (metaSnap.exists()) teacherLang = metaSnap.val()?.teacherLang || null;
+                    } catch (_) { }
+
+                    let textForTeacher = null;
+                    if (teacherLang) {
+                        textForTeacher = await this.translateText(val, this.state.lang, teacherLang);
+                    }
+
+                    await push(ref(this.db, `chats/${this.state.room}/studentChats`), {
+                        senderName: this.state.name,
+                        senderId: this.state.name,
+                        lang: this.state.lang,
+                        text: val,
+                        teacherLang: teacherLang || null,
+                        textForTeacher: textForTeacher || null,
+                        timestamp: Date.now()
+                    });
+
+                    document.getElementById('chat-input').value = '';
+                    this.toggleModal('chat');
+                    this.showToast("Chat sent", "success");
+                } catch (e) {
+                    this.showToast("Failed to send chat: " + e.message, "error");
                 }
             }
 
@@ -1179,291 +1425,360 @@
                 if (this.student.recording) return;
 
                 try {
-                    this.student.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Check Web Speech API support
+                    if (!SpeechRecognition) {
+                        throw new Error('Web Speech API not supported in this browser');
+                    }
+
+                    // Reset capture buffers
+                    this.student.finalParts = [];
+                    this.student.lastInterim = '';
+
+                    // FIX: echo cancellation constraints (reduces feedback on devices)
+                    this.student.mediaStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+
+                    // Wake Lock (best-effort)
+                    if ('wakeLock' in navigator) {
+                        try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (_) { }
+                    }
+
+                    // Setup Web Speech Recognition
                     this.student.recognition = new SpeechRecognition();
                     this.student.recognition.continuous = true;
                     this.student.recognition.interimResults = true;
                     this.student.recognition.lang = this.state.lang || 'en-US';
+                    this.student.recognition.maxAlternatives = 1;
 
-                    this.student.finalParts = [];
+                    // Setup MediaRecorder for audio capture
+                    const options = {};
+                    try { options.mimeType = 'audio/webm'; } catch (_) { }
+                    this.student.mediaRecorder = new MediaRecorder(this.student.mediaStream, options);
                     this.student.audioChunks = [];
 
-                    // Setup MediaRecorder for audio blob
-                    this.student.mediaRecorder = new MediaRecorder(this.student.mediaStream);
-                    this.student.mediaRecorder.ondataavailable = e => {
-                         if (e.data.size > 0) this.student.audioChunks.push(e.data);
-                    };
-
-                    this.student.recognition.onresult = (event) => {
-                        let final = "";
-                        for (let i = event.resultIndex; i < event.results.length; i++) {
-                            if (event.results[i].isFinal) final += event.results[i][0].transcript;
+                    this.student.mediaRecorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) {
+                            this.student.audioChunks.push(e.data);
                         }
-                        if (final) this.student.finalParts.push(final.trim());
                     };
 
+                    // Speech recognition event handlers
+                    this.student.recognition.onresult = (event) => {
+                        let interimTranscript = '';
+                        let finalTranscript = '';
+
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            const transcript = event.results[i][0].transcript;
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript;
+                            } else {
+                                interimTranscript += transcript;
+                            }
+                        }
+
+                        this.student.lastInterim = interimTranscript;
+
+                        if (finalTranscript) {
+                            this.student.finalParts.push(finalTranscript.trim());
+                        }
+                    };
+
+                    this.student.recognition.onerror = (event) => {
+                        console.error('Student speech recognition error:', event.error);
+                    };
+
+                    // Start recognition and recording
                     this.student.recognition.start();
-                    this.student.mediaRecorder.start(200);
+                    this.student.mediaRecorder.start(250);
                     this.student.recording = true;
                     this.updateStudentMicButton();
+
                     this.showToast("Recording...", "info");
                 } catch (e) {
                     await this.stopStudentCapture(false);
-                    this.showToast("Mic Error", "error");
+                    this.showToast("Student mic error: " + (e?.message || e), "error");
                 }
             }
 
             async stopStudentCapture(submit = true) {
-                if (this.student.recognition) this.student.recognition.stop();
-                
-                // Stop Recorder & Stream
+                // Stop speech recognition
+                try { if (this.student.recognition) this.student.recognition.stop(); } catch (_) { }
+
+                // Stop recorder first (to flush last chunk)
                 const recorder = this.student.mediaRecorder;
                 if (recorder && recorder.state !== 'inactive') {
-                    await new Promise(r => {
-                        recorder.onstop = r;
-                        recorder.stop();
+                    await new Promise((resolve) => {
+                        recorder.onstop = () => resolve();
+                        try { recorder.stop(); } catch (_) { resolve(); }
                     });
                 }
-                if (this.student.mediaStream) this.student.mediaStream.getTracks().forEach(t => t.stop());
 
-                const finalText = this.student.finalParts.join(" ").trim();
-                const mimeType = recorder ? recorder.mimeType : 'audio/webm';
+                // Stop tracks
+                try {
+                    if (this.student.mediaStream) {
+                        this.student.mediaStream.getTracks().forEach(t => t.stop());
+                    }
+                } catch (_) { }
 
-                if (submit && finalText) {
-                    let audioBase64 = null;
-                    const blob = new Blob(this.student.audioChunks, { type: mimeType });
-                    if (blob.size <= 1500000) audioBase64 = await this.blobToBase64(blob);
+                // Release wake lock
+                try { if (this.wakeLock) await this.wakeLock.release(); } catch (_) { }
+                this.wakeLock = null;
 
-                    let textForTeacher = await this.translateText(finalText, this.state.lang, 'en'); // default to EN if unknown
+                // Compose transcript
+                const finalText = (this.student.finalParts.join(' ').trim() || this.student.lastInterim.trim() || '').trim();
 
-                    await push(ref(this.db, `chats/${this.state.room}/studentResponses`), {
-                        senderName: this.state.name,
-                        lang: this.state.lang,
-                        text: finalText,
-                        textForTeacher: textForTeacher,
-                        audioBase64: audioBase64,
-                        audioMimeType: mimeType,
-                        timestamp: Date.now()
-                    });
-                    this.showToast("Sent!", "success");
+                // Reset capture objects
+                const chunks = this.student.audioChunks.slice();
+                const mimeType = (this.student.mediaRecorder && this.student.mediaRecorder.mimeType) ? this.student.mediaRecorder.mimeType : 'audio/webm';
+
+                this.student.recognition = null;
+                this.student.mediaRecorder = null;
+                this.student.mediaStream = null;
+                this.student.audioChunks = [];
+                this.student.finalParts = [];
+                this.student.lastInterim = '';
+
+                // If submit requested, push to Firebase
+                if (submit) {
+                    try {
+                        if (!finalText) {
+                            this.showToast("No speech detected", "error");
+                        } else {
+                            // Get teacher language (meta), fallback to teacher translating later
+                            let teacherLang = null;
+                            try {
+                                const metaSnap = await get(ref(this.db, `chats/${this.state.room}/meta`));
+                                if (metaSnap.exists()) teacherLang = metaSnap.val()?.teacherLang || null;
+                            } catch (_) { }
+
+                            let textForTeacher = null;
+                            if (teacherLang) {
+                                textForTeacher = await this.translateText(finalText, this.state.lang, teacherLang);
+                            }
+
+                            // Encode audio (guard size)
+                            let audioBase64 = null;
+                            const blob = new Blob(chunks, { type: mimeType });
+                            if (blob.size <= 1_500_000) {
+                                audioBase64 = await this.blobToBase64(blob);
+                            }
+
+                            await push(ref(this.db, `chats/${this.state.room}/studentResponses`), {
+                                senderName: this.state.name,
+                                senderId: this.state.name,
+                                lang: this.state.lang,
+                                text: finalText,
+                                teacherLang: teacherLang || null,
+                                textForTeacher: textForTeacher || null,
+                                audioMimeType: mimeType,
+                                audioBase64: audioBase64 || null,
+                                timestamp: Date.now()
+                            });
+
+                            this.showToast(audioBase64 ? "Sent (audio + text)" : "Sent (text only)", "success");
+                        }
+                    } catch (e) {
+                        this.showToast("Failed to submit: " + e.message, "error");
+                    }
                 }
 
-                // Reset
+                // After speaking, reset approval (student must request again)
                 this.student.recording = false;
                 this.student.approved = false;
                 this.student.requestPending = false;
+                this.student.approvalKey = null;
                 this.updateStudentMicButton();
             }
 
             async blobToBase64(blob) {
-                return new Promise((resolve) => {
+                return await new Promise((resolve, reject) => {
                     const r = new FileReader();
-                    r.onloadend = () => resolve(r.result.split(',')[1]);
+                    r.onerror = () => reject(r.error);
+                    r.onloadend = () => {
+                        const s = String(r.result || '');
+                        const idx = s.indexOf(',');
+                        resolve(idx >= 0 ? s.slice(idx + 1) : s);
+                    };
                     r.readAsDataURL(blob);
                 });
             }
 
-            // --- TEACHER APPROVAL LOGIC ---
-
-            initTeacher() {
-                document.getElementById('teacher-code-display').innerText = this.state.room;
-                
-                // Mic Requests
-                onChildAdded(ref(this.db, `chats/${this.state.room}/requests`), (snap) => {
-                    this.renderMicRequestCard(snap.key, snap.val());
-                    this.incrementQuestionCount();
-                });
-
-                // Hand Raises
-                onChildAdded(ref(this.db, `chats/${this.state.room}/handRaises`), (snap) => {
-                    this.renderHandRaiseCard(snap.key, snap.val());
-                    this.incrementQuestionCount();
-                });
-
-                // Student Responses
-                onChildAdded(ref(this.db, `chats/${this.state.room}/studentResponses`), async (snap) => {
-                    const r = snap.val();
-                    const text = r.textForTeacher || await this.translateText(r.text, r.lang, this.state.lang);
-                    this.renderStudentSpeechCard({
-                        sender: r.senderName, text: text, original: r.text,
-                        audioBase64: r.audioBase64, audioMimeType: r.audioMimeType
-                    });
-                    this.incrementQuestionCount();
-                });
-
-                // Questions
-                onChildAdded(ref(this.db, `chats/${this.state.room}/questions`), async (snap) => {
-                    const q = snap.val();
-                    const text = await this.translateText(q.text, q.lang, this.state.lang);
-                    this.renderQuestionCard({ kind: 'question', sender: q.senderName, text, original: q.text });
-                    this.incrementQuestionCount();
-                });
-
-                // Student List
-                onChildAdded(ref(this.db, `chats/${this.state.room}/students`), (snap) => {
-                    this.renderStudentListItem(snap.val());
-                    this.updateStudentCount();
-                });
-            }
-
-            incrementQuestionCount() {
-                const count = document.getElementById('question-count');
-                if (count) count.innerText = String((parseInt(count.innerText) || 0) + 1);
-            }
-            updateStudentCount() {
-                const list = document.getElementById('students-list');
-                const count = document.getElementById('student-count');
-                if (list && count) count.innerText = list.children.length;
-            }
-
-            renderMicRequestCard(key, req) {
-                const list = document.getElementById('teacher-questions');
-                const card = document.createElement('div');
-                card.className = "bg-white border border-emerald-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-emerald-300 transition-colors";
-                card.innerHTML = `
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded uppercase">${req.senderName}</span>
-                                <span class="text-[10px] font-black text-emerald-600 uppercase tracking-tight">Mic Request</span>
-                            </div>
-                        </div>
-                        <button class="approve-btn btn-modern px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Approve</button>
-                    </div>
-                `;
-                card.querySelector('.approve-btn').onclick = () => {
-                    this.approveMicRequest(key, req);
-                    card.remove();
-                };
-                list.prepend(card);
-            }
-
-            renderHandRaiseCard(key, req) {
-                const list = document.getElementById('teacher-questions');
-                const card = document.createElement('div');
-                card.className = "bg-white border border-amber-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-amber-300 transition-colors";
-                card.innerHTML = `
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded uppercase">${req.senderName}</span>
-                                <span class="text-[10px] font-black text-amber-600 uppercase tracking-tight">Raised Hand</span>
-                            </div>
-                        </div>
-                        <button class="approve-btn btn-modern px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold">Approve</button>
-                    </div>
-                `;
-                card.querySelector('.approve-btn').onclick = () => {
-                    this.approveChatRequest(key, req);
-                    card.remove();
-                };
-                list.prepend(card);
-            }
-
-            async approveMicRequest(key, req) {
-                await push(ref(this.db, `chats/${this.state.room}/approvedSpeakers`), { speakerName: req.senderName });
-                await remove(ref(this.db, `chats/${this.state.room}/requests/${key}`));
-                this.showToast(`Approved ${req.senderName}`, "success");
-            }
-            async approveChatRequest(key, req) {
-                await push(ref(this.db, `chats/${this.state.room}/approvedChat`), { speakerName: req.senderName });
-                await remove(ref(this.db, `chats/${this.state.room}/handRaises/${key}`));
-                this.showToast(`Approved Chat: ${req.senderName}`, "success");
-            }
-
-            renderStudentSpeechCard({ sender, text, original, audioBase64, audioMimeType }) {
-                const list = document.getElementById('teacher-questions');
-                const card = document.createElement('div');
-                card.className = "bg-white border border-purple-100 p-3 rounded-xl shadow-sm animate-slide-up";
-                card.innerHTML = `
-                    <div class="flex justify-between mb-1 gap-2"><span class="text-[10px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded uppercase">${sender}</span></div>
-                    <p class="text-sm font-semibold text-gray-800">${text}</p>
-                    <p class="text-xs text-gray-400 italic mt-1 truncate">${original}</p>
-                    ${audioBase64 ? `<button class="play-btn mt-2 bg-purple-600 text-white px-3 py-1 text-xs rounded">Play Audio</button>` : ''}
-                `;
-                if(audioBase64) {
-                    card.querySelector('.play-btn').onclick = () => {
-                        const audio = new Audio("data:" + audioMimeType + ";base64," + audioBase64);
-                        audio.play();
-                    };
-                }
-                list.prepend(card);
-            }
-
-            renderQuestionCard({ kind, sender, text, original }) {
-                const list = document.getElementById('teacher-questions');
-                const card = document.createElement('div');
-                card.className = "bg-white border border-blue-100 p-3 rounded-xl shadow-sm animate-slide-up";
-                card.innerHTML = `
-                    <div class="flex justify-between mb-1"><span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">${sender}</span></div>
-                    <p class="text-sm font-semibold text-gray-800">${text}</p>
-                    <p class="text-xs text-gray-400 italic mt-1 truncate">${original}</p>
-                `;
-                list.prepend(card);
-            }
-
-            renderStudentListItem(student) {
-                const list = document.getElementById('students-list');
-                const card = document.createElement('div');
-                card.className = "bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex items-center justify-between";
-                card.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">${student.name.charAt(0)}</div>
-                        <p class="text-sm font-semibold">${student.name}</p>
-                    </div>
-                `;
-                list.appendChild(card);
-            }
-
-            // --- STUDENT UI LOGIC ---
-            
-            updateChatControls() {
-                const raiseBtn = document.getElementById('raise-hand-btn');
-                const chatBtn = document.getElementById('chat-btn-student');
-                if(!raiseBtn || !chatBtn) return;
-                
-                chatBtn.disabled = !this.student.chatApproved;
-                if(this.student.chatApproved) chatBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-                else chatBtn.classList.add('opacity-60', 'cursor-not-allowed');
-
-                if(this.student.chatRequestPending) {
-                    raiseBtn.classList.add('bg-amber-500', 'opacity-70');
-                    raiseBtn.disabled = true;
-                }
-            }
-
+            // --- STUDENT LOGIC ---
             initStudent() {
                 document.getElementById('student-name-display').innerText = this.state.name;
-                document.getElementById('student-lang-badge').innerText = this.state.lang.toUpperCase();
                 document.getElementById('student-room-code').innerText = this.state.room;
+                const badge = document.getElementById('student-lang-badge');
+                badge.innerText = this.state.lang.toUpperCase();
+
                 this.updateStudentMicButton();
                 this.updateChatControls();
+                this.listenForStudentApproval();
+                this.listenForChatApproval();
 
-                // Approvals
-                onChildAdded(ref(this.db, `chats/${this.state.room}/approvedSpeakers`), (snap) => {
-                    if(snap.val().speakerName === this.state.name) {
-                        this.student.approved = true;
-                        this.student.requestPending = false;
-                        this.updateStudentMicButton();
-                        this.startStudentCapture();
-                    }
-                });
-                onChildAdded(ref(this.db, `chats/${this.state.room}/approvedChat`), (snap) => {
-                    if(snap.val().speakerName === this.state.name) {
-                        this.student.chatApproved = true;
-                        this.student.chatRequestPending = false;
-                        this.updateChatControls();
-                        this.showToast("Chat Approved!", "success");
-                    }
-                });
+                // Register student in room
+                this.registerStudent();
 
-                // Messages
-                onChildAdded(ref(this.db, `chats/${this.state.room}/messages`), async (snap) => {
+                const msgsRef = ref(this.db, `chats/${this.state.room}/messages`);
+                onChildAdded(msgsRef, async (snap) => {
+                    if (this.state.role !== 'student') return;
                     const msg = snap.val();
-                    const text = await this.translateText(msg.text, msg.lang, this.state.lang);
-                    this.renderMessageBubble(text, msg.text, msg.senderName);
-                    if(this.state.isTTSActive) this.queueAudio(text);
+                    if (!msg) return;
+
+                    // Translate
+                    const translated = await this.translateText(msg.text, msg.lang, this.state.lang);
+
+                    // Render
+                    this.renderMessageBubble(translated, msg.text, msg.senderName);
+
+                    // FIX: if student is currently recording, do NOT play TTS (prevents echo bleed)
+                    if (this.student.recording) return;
+
+                    // TTS Queue - ONLY FOR STUDENTS HEARING TEACHER
+                    if (this.state.isTTSActive && msg.senderId !== this.state.name) {
+                        this.queueAudio(translated, msg.gender || 'Female');
+                    }
                 });
+            }
+
+            toggleTTS() {
+                this.state.isTTSActive = !this.state.isTTSActive;
+
+                // Update Student UI
+                const sIcon = document.getElementById('tts-icon');
+                const sBtn = document.getElementById('tts-btn');
+
+                // Update Teacher UI
+                const tIcon = document.getElementById('teacher-tts-icon');
+                const tBtn = document.getElementById('teacher-tts-btn');
+
+                const updateUI = (icon, btn) => {
+                    if (!icon || !btn) return;
+                    if (this.state.isTTSActive) {
+                        icon.className = "fa-solid fa-volume-high";
+                        btn.classList.add('text-blue-500');
+                    } else {
+                        icon.className = "fa-solid fa-volume-xmark";
+                        btn.classList.remove('text-blue-500');
+                    }
+                };
+
+                updateUI(sIcon, sBtn);
+                updateUI(tIcon, tBtn);
+
+                if (this.state.isTTSActive) {
+                    this.processAudioQueue();
+                    this.showToast("Voice Output Enabled", "success");
+                } else {
+                    // FIX: stop audio and clear queue to prevent repeats
+                    this.stopCurrentAudio(true);
+                    this.showToast("Voice Output Muted", "info");
+                }
+            }
+
+            async registerStudent() {
+                if (this.state.role !== 'student' || !this.state.room) return;
+                try {
+                    const langInfo = LANGUAGES.find(l => l.code === this.state.lang);
+                    const langName = langInfo ? langInfo.name : this.state.lang.toUpperCase();
+                    await set(ref(this.db, `chats/${this.state.room}/students/${this.state.name}`), {
+                        name: this.state.name,
+                        lang: this.state.lang,
+                        langName: langName,
+                        joinedAt: Date.now()
+                    });
+                } catch (e) {
+                    console.error('Failed to register student:', e);
+                }
+            }
+
+            queueAudio(text, gender) {
+                // queue only if enabled
+                if (!this.state.isTTSActive) return;
+                this.state.audioQueue.push({ text: this.normalizeSpacing(text), gender });
+                this.processAudioQueue();
+            }
+
+            async processAudioQueue() {
+                if (!this.state.isTTSActive) return;
+                if (this.state.isAudioPlaying || this.state.audioQueue.length === 0) return;
+
+                this.state.isAudioPlaying = true;
+                const item = this.state.audioQueue.shift();
+
+                try {
+                    const lang = this.state.lang;
+                    const baseLang = lang.split('-')[0];
+                    const voiceId = CREDENTIALS.CARTESIA_VOICES[lang] ||
+                        CREDENTIALS.CARTESIA_VOICES[baseLang] ||
+                        CREDENTIALS.CARTESIA_VOICES["default"];
+
+                    // FIX: pause teacher mic while TTS plays (prevents echo loop & repetition)
+                    this.pauseTeacherMicForTTS();
+
+                    // Stop any current audio to avoid overlaps
+                    this.stopCurrentAudio(false);
+
+                    const transcript = `<emotion value="neutral" />${item.text}`;
+
+                    const res = await fetch("https://api.cartesia.ai/tts/bytes", {
+                        method: "POST",
+                        headers: {
+                            "Cartesia-Version": "2025-04-16",
+                            "X-API-Key": CREDENTIALS.CARTESIA,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "model_id": "sonic-3-latest",
+                            "transcript": transcript,
+                            "voice": { "mode": "id", "id": voiceId },
+                            "output_format": { "container": "wav", "encoding": "pcm_f32le", "sample_rate": 44100 },
+                            "language": baseLang,
+                            "speed": "normal",
+                            ...(CREDENTIALS.CARTESIA_PDICT[lang] ? { "pronunciation_dict_id": CREDENTIALS.CARTESIA_PDICT[lang] } : {}),
+                            "generation_config": { "speed": 1, "volume": 1 }
+                        })
+                    });
+
+                    if (!res.ok) {
+                        this.state.isAudioPlaying = false;
+                        this.resumeTeacherMicAfterTTS();
+                        this.processAudioQueue();
+                        return;
+                    }
+
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+
+                    const audio = new Audio(url);
+                    audio.preload = "auto";
+                    audio.setAttribute("playsinline", "true");
+
+                    this.currentAudio = audio;
+                    this.currentAudioUrl = url;
+
+                    audio.onended = () => {
+                        this.stopCurrentAudio(false);
+                        this.resumeTeacherMicAfterTTS();
+                        this.processAudioQueue();
+                    };
+
+                    audio.onerror = () => {
+                        this.stopCurrentAudio(false);
+                        this.resumeTeacherMicAfterTTS();
+                        this.processAudioQueue();
+                    };
+
+                    await audio.play();
+                } catch (e) {
+                    console.error("TTS Error", e);
+                    this.state.isAudioPlaying = false;
+                    this.resumeTeacherMicAfterTTS();
+                }
             }
 
             renderMessageBubble(text, original, sender) {
@@ -1473,104 +1788,811 @@
                 bubble.innerHTML = `
                     <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">${sender}</p>
                     <p class="text-lg font-medium text-gray-800 leading-snug">${text}</p>
-                    <div class="border-t border-gray-100 mt-2 pt-1"><p class="text-xs text-gray-400 italic truncate">${original}</p></div>
+                    <div class="border-t border-gray-100 mt-2 pt-1">
+                        <p class="text-xs text-gray-400 italic truncate">${original}</p>
+                    </div>
                 `;
                 stream.appendChild(bubble);
                 stream.scrollTop = stream.scrollHeight;
             }
 
-            sendRaiseHandRequest() {
-                this.student.chatRequestPending = true;
-                this.updateChatControls();
-                push(ref(this.db, `chats/${this.state.room}/handRaises`), {
-                    senderName: this.state.name, lang: this.state.lang, timestamp: Date.now()
-                });
-                this.showToast("Hand Raised", "success");
-            }
+            // --- TEACHER LOGIC (WEB SPEECH + REQUESTS + STUDENT RESPONSES) ---
+            async initTeacher() {
+                document.getElementById('teacher-code-display').innerText = this.state.room;
 
-            openChatModal() { this.toggleModal('chat'); }
-            
-            sendStudentChat() {
-                const val = document.getElementById('chat-input').value.trim();
-                if(!val) return;
-                push(ref(this.db, `chats/${this.state.room}/studentChats`), {
-                    senderName: this.state.name, lang: this.state.lang, text: val, timestamp: Date.now()
-                });
-                document.getElementById('chat-input').value = '';
-                this.toggleModal('chat');
-            }
-
-            sendQuestion() {
-                const val = document.getElementById('q-input').value.trim();
-                if(!val) return;
-                push(ref(this.db, `chats/${this.state.room}/questions`), {
-                    senderName: this.state.name, lang: this.state.lang, text: val, timestamp: Date.now()
-                });
-                document.getElementById('q-input').value = '';
-                this.toggleModal('question');
-            }
-
-            // --- SHARED UTILS ---
-
-            async translateText(text, source, target) {
-                if (!text) return "";
-                if (!source || !target) return text;
-                
-                // Fix: Google Translate API (free tier) fails with full locale codes (e.g. en-US). 
-                const s = source.startsWith('zh') ? source : source.split('-')[0];
-                const t = target.startsWith('zh') ? target : target.split('-')[0];
-                if (s === t) return text;
-
+                // Publish room meta for student-side translation target
                 try {
-                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${s}&tl=${t}&dt=t&q=${encodeURIComponent(text)}`;
-                    const res = await fetch(url);
-                    const json = await res.json();
-                    if (json && json[0]) return json[0].map(x => x[0]).join("");
-                    return text;
-                } catch (e) {
-                    console.error("Translation failed", e);
-                    return text;
-                }
-            }
+                    await set(ref(this.db, `chats/${this.state.room}/meta`), {
+                        teacherLang: this.state.lang,
+                        teacherName: this.state.name,
+                        updatedAt: Date.now()
+                    });
+                } catch (_) { }
 
-            queueAudio(text) {
-                // Simplified TTS for brevity - restores Cartesia logic from original if needed
-                if(!window.speechSynthesis) return;
-                const u = new SpeechSynthesisUtterance(text);
-                window.speechSynthesis.speak(u);
-            }
+                // Questions Listener
+                const qRef = ref(this.db, `chats/${this.state.room}/questions`);
+                onChildAdded(qRef, async (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const q = snap.val();
+                    if (!q) return;
 
-            toggleTTS() {
-                this.state.isTTSActive = !this.state.isTTSActive;
-                this.showToast(this.state.isTTSActive ? "Voice Enabled" : "Voice Muted");
+                    const trans = await this.translateText(q.text, q.lang, this.state.lang);
+                    this.renderQuestionCard({
+                        kind: 'question',
+                        sender: q.senderName,
+                        text: trans,
+                        original: q.text
+                    });
+
+                    this.incrementQuestionCount();
+
+                    // TEACHER TTS
+                    if (this.state.isTTSActive) {
+                        this.queueAudio(trans, 'Female');
+                    }
+                });
+
+                // Mic Requests Listener
+                const rRef = ref(this.db, `chats/${this.state.room}/requests`);
+                onChildAdded(rRef, async (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const req = snap.val();
+                    if (!req) return;
+
+                    this.renderMicRequestCard(snap.key, req);
+                    this.incrementQuestionCount();
+
+                    // Browser Notification
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            new Notification("Mic Request", { body: `${req.senderName} requests to speak.` });
+                        } catch (_) { }
+                    }
+
+                    this.showToast(`Mic request: ${req.senderName}`, "info");
+                });
+
+                // Hand Raise (Chat) Listener
+                const hRef = ref(this.db, `chats/${this.state.room}/handRaises`);
+                onChildAdded(hRef, async (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const req = snap.val();
+                    if (!req) return;
+
+                    this.renderHandRaiseCard(snap.key, req);
+                    this.incrementQuestionCount();
+
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            new Notification("Hand Raise", { body: `${req.senderName} requests to chat.` });
+                        } catch (_) { }
+                    }
+
+                    this.showToast(`Hand raise: ${req.senderName}`, "info");
+                });
+
+                // Student Responses Listener
+                const sRef = ref(this.db, `chats/${this.state.room}/studentResponses`);
+                onChildAdded(sRef, async (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const resp = snap.val();
+                    if (!resp) return;
+
+                    const teacherText = resp.textForTeacher
+                        ? resp.textForTeacher
+                        : await this.translateText(resp.text, resp.lang, this.state.lang);
+
+                    this.renderStudentSpeechCard({
+                        sender: resp.senderName,
+                        text: teacherText,
+                        original: resp.text,
+                        audioBase64: resp.audioBase64 || null,
+                        audioMimeType: resp.audioMimeType || 'audio/webm'
+                    });
+
+                    this.incrementQuestionCount();
+
+                    if (this.state.isTTSActive) {
+                        this.queueAudio(teacherText, 'Female');
+                    }
+                });
+
+                // Student Chat Listener
+                const cRef = ref(this.db, `chats/${this.state.room}/studentChats`);
+                onChildAdded(cRef, async (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const resp = snap.val();
+                    if (!resp) return;
+
+                    const teacherText = resp.textForTeacher
+                        ? resp.textForTeacher
+                        : await this.translateText(resp.text, resp.lang, this.state.lang);
+
+                    this.renderStudentChatCard({
+                        sender: resp.senderName,
+                        text: teacherText,
+                        original: resp.text
+                    });
+
+                    this.incrementQuestionCount();
+
+                    if (this.state.isTTSActive) {
+                        this.queueAudio(teacherText, 'Female');
+                    }
+                });
+
+                // Students List Listener
+                const studentsRef = ref(this.db, `chats/${this.state.room}/students`);
+                onChildAdded(studentsRef, (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const student = snap.val();
+                    if (!student) return;
+                    this.renderStudentListItem(student);
+                    this.updateStudentCount();
+                });
+
+                // Reactions Listener (for notifications)
+                const reactionsRef = ref(this.db, `chats/${this.state.room}/reactions`);
+                onChildAdded(reactionsRef, (snap) => {
+                    if (this.state.role !== 'teacher') return;
+                    const reaction = snap.val();
+                    if (!reaction) return;
+                    this.addNotification(reaction.emoji, reaction.senderName, reaction.timestamp);
+                });
             }
 
             switchTeacherTab(tab) {
-                if(tab === 'questions') {
-                    document.getElementById('tab-questions-content').classList.remove('hidden');
-                    document.getElementById('tab-students-content').classList.add('hidden');
+                const questionsBtn = document.getElementById('tab-questions-btn');
+                const studentsBtn = document.getElementById('tab-students-btn');
+                const questionsContent = document.getElementById('tab-questions-content');
+                const studentsContent = document.getElementById('tab-students-content');
+
+                if (!questionsBtn || !studentsBtn || !questionsContent || !studentsContent) return;
+
+                if (tab === 'questions') {
+                    questionsBtn.classList.add('bg-blue-100', 'text-blue-700');
+                    questionsBtn.classList.remove('text-gray-500', 'hover:bg-gray-100');
+                    studentsBtn.classList.remove('bg-blue-100', 'text-blue-700');
+                    studentsBtn.classList.add('text-gray-500', 'hover:bg-gray-100');
+                    questionsContent.classList.remove('hidden');
+                    studentsContent.classList.add('hidden');
                 } else {
-                    document.getElementById('tab-questions-content').classList.add('hidden');
-                    document.getElementById('tab-students-content').classList.remove('hidden');
+                    studentsBtn.classList.add('bg-blue-100', 'text-blue-700');
+                    studentsBtn.classList.remove('text-gray-500', 'hover:bg-gray-100');
+                    questionsBtn.classList.remove('bg-blue-100', 'text-blue-700');
+                    questionsBtn.classList.add('text-gray-500', 'hover:bg-gray-100');
+                    studentsContent.classList.remove('hidden');
+                    questionsContent.classList.add('hidden');
                 }
             }
 
+            addNotification(emoji, senderName, timestamp) {
+                const list = document.getElementById('notifications-list');
+                if (!list) return;
+
+                // Remove empty placeholder
+                const empty = document.getElementById('notifications-empty');
+                if (empty) empty.remove();
+
+                const item = document.createElement('div');
+                item.className = "bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center gap-3 animate-slide-up";
+                item.innerHTML = `
+                    <span class="text-2xl">${emoji}</span>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-gray-800">${senderName}</p>
+                        <p class="text-[10px] text-gray-400">Sent a reaction</p>
+                    </div>
+                `;
+                list.prepend(item);
+
+                this.updateNotifBadge();
+                this.showToast(`${emoji} from ${senderName}`, "info");
+            }
+
+            updateNotifBadge() {
+                const list = document.getElementById('notifications-list');
+                const badge = document.getElementById('notif-badge');
+                if (!list || !badge) return;
+
+                const count = list.querySelectorAll('.animate-slide-up').length;
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            clearNotifications() {
+                const list = document.getElementById('notifications-list');
+                if (!list) return;
+
+                list.innerHTML = `
+                    <div id="notifications-empty" class="text-center py-10 opacity-40">
+                        <i class="fa-regular fa-bell-slash text-2xl mb-2 text-gray-400"></i>
+                        <p class="text-xs text-gray-500">No notifications yet</p>
+                    </div>
+                `;
+
+                const badge = document.getElementById('notif-badge');
+                if (badge) badge.classList.add('hidden');
+
+                this.toggleModal('notifications');
+            }
+
+            updateStudentCount() {
+                const list = document.getElementById('students-list');
+                const count = document.getElementById('student-count');
+                if (!count || !list) return;
+                count.innerText = String(list.children.length);
+            }
+
+            renderStudentListItem(student) {
+                const list = document.getElementById('students-list');
+                if (!list) return;
+
+                // Remove empty placeholder
+                const empty = document.getElementById('students-empty');
+                if (empty) empty.remove();
+
+                // Check if already exists
+                if (document.getElementById(`student-item-${student.name}`)) return;
+
+                const langInfo = LANGUAGES.find(l => l.code === student.lang);
+                const flag = langInfo?.flag || '';
+
+                const card = document.createElement('div');
+                card.id = `student-item-${student.name}`;
+                card.className = "bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex items-center justify-between gap-3";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                            ${student.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">${student.name}</p>
+                            <p class="text-[11px] text-gray-500">${flag} ${student.langName || student.lang}</p>
+                        </div>
+                    </div>
+                    <span class="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase">Online</span>
+                `;
+                list.appendChild(card);
+            }
+
+            ensureTeacherListHasNoPlaceholder() {
+                const empty = document.getElementById('teacher-empty');
+                if (empty) empty.remove();
+            }
+
+            incrementQuestionCount() {
+                const count = document.getElementById('question-count');
+                if (!count) return;
+                count.innerText = String((parseInt(count.innerText || '0', 10) || 0) + 1);
+            }
+
+            renderQuestionCard({ kind, sender, text, original }) {
+                const list = document.getElementById('teacher-questions');
+                if (!list) return;
+                this.ensureTeacherListHasNoPlaceholder();
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-blue-100 p-3 rounded-xl shadow-sm animate-slide-up cursor-pointer hover:border-blue-300 transition-colors";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded uppercase">${sender}</span>
+                        <span class="text-[10px] font-black text-blue-500 uppercase tracking-tight">${kind}</span>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-800 leading-snug">${text}</p>
+                    <p class="text-xs text-gray-400 italic mt-1 truncate">${original}</p>
+                `;
+                list.prepend(card);
+            }
+
+            renderMicRequestCard(reqKey, req) {
+                const list = document.getElementById('teacher-questions');
+                if (!list) return;
+                this.ensureTeacherListHasNoPlaceholder();
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-emerald-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-emerald-300 transition-colors";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded uppercase">${req.senderName}</span>
+                                <span class="text-[10px] font-black text-emerald-600 uppercase tracking-tight">requests to speak</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-1 truncate">Language: ${(req.lang || '').toUpperCase()}</p>
+                        </div>
+                        <button class="approve-btn btn-modern px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i>
+                            Approve
+                        </button>
+                    </div>
+                `;
+
+                const btn = card.querySelector('.approve-btn');
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    btn.disabled = true;
+                    btn.classList.add('opacity-70');
+                    await this.approveMicRequest(reqKey, req);
+                    card.remove();
+                });
+
+                list.prepend(card);
+            }
+
+            renderHandRaiseCard(reqKey, req) {
+                const list = document.getElementById('teacher-questions');
+                if (!list) return;
+                this.ensureTeacherListHasNoPlaceholder();
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-amber-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-amber-300 transition-colors";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded uppercase">${req.senderName}</span>
+                                <span class="text-[10px] font-black text-amber-600 uppercase tracking-tight">raised hand</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-1 truncate">Language: ${(req.lang || '').toUpperCase()}</p>
+                        </div>
+                        <button class="approve-chat btn-modern px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i>
+                            Approve
+                        </button>
+                    </div>
+                `;
+
+                const btn = card.querySelector('.approve-chat');
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    btn.disabled = true;
+                    btn.classList.add('opacity-70');
+                    await this.approveChatRequest(reqKey, req);
+                    card.remove();
+                });
+
+                list.prepend(card);
+            }
+
+            async approveMicRequest(reqKey, req) {
+                try {
+                    await push(ref(this.db, `chats/${this.state.room}/approvedSpeakers`), {
+                        speakerName: req.senderName,
+                        approvedAt: Date.now(),
+                        teacherLang: this.state.lang
+                    });
+                    await remove(ref(this.db, `chats/${this.state.room}/requests/${reqKey}`));
+                    this.showToast(`Approved: ${req.senderName}`, "success");
+                } catch (e) {
+                    this.showToast("Approve failed: " + e.message, "error");
+                }
+            }
+
+            async approveChatRequest(reqKey, req) {
+                try {
+                    await push(ref(this.db, `chats/${this.state.room}/approvedChat`), {
+                        speakerName: req.senderName,
+                        approvedAt: Date.now(),
+                        teacherLang: this.state.lang
+                    });
+                    await remove(ref(this.db, `chats/${this.state.room}/handRaises/${reqKey}`));
+                    this.showToast(`Chat approved: ${req.senderName}`, "success");
+                } catch (e) {
+                    this.showToast("Approve failed: " + e.message, "error");
+                }
+            }
+
+            renderStudentSpeechCard({ sender, text, original, audioBase64, audioMimeType }) {
+                const list = document.getElementById('teacher-questions');
+                if (!list) return;
+                this.ensureTeacherListHasNoPlaceholder();
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-purple-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-purple-300 transition-colors";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1 gap-2">
+                        <span class="text-[10px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded uppercase">${sender}</span>
+                        <span class="text-[10px] font-black text-purple-600 uppercase tracking-tight">student speech</span>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-800 leading-snug">${text}</p>
+                    <p class="text-xs text-gray-400 italic mt-1 truncate">${original}</p>
+                    ${audioBase64 ? `
+                        <div class="mt-2">
+                            <button class="play-audio btn-modern px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-play"></i>
+                                Play Audio
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="mt-2 text-[10px] text-gray-400 font-semibold">
+                            (Audio not included)
+                        </div>
+                    `}
+                `;
+
+                if (audioBase64) {
+                    const playBtn = card.querySelector('.play-audio');
+                    playBtn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.playAudioFromBase64(audioBase64, audioMimeType || 'audio/webm');
+                    });
+                }
+
+                list.prepend(card);
+            }
+
+            renderStudentChatCard({ sender, text, original }) {
+                const list = document.getElementById('teacher-questions');
+                if (!list) return;
+                this.ensureTeacherListHasNoPlaceholder();
+
+                const card = document.createElement('div');
+                card.className = "bg-white border border-sky-100 p-3 rounded-xl shadow-sm animate-slide-up hover:border-sky-300 transition-colors";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-bold bg-sky-50 text-sky-600 px-1.5 py-0.5 rounded uppercase">${sender}</span>
+                        <span class="text-[10px] font-black text-sky-600 uppercase tracking-tight">chat</span>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-800 leading-snug">${text}</p>
+                    <p class="text-xs text-gray-400 italic mt-1 truncate">${original}</p>
+                `;
+                list.prepend(card);
+            }
+
+            playAudioFromBase64(base64, mimeType) {
+                try {
+                    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+                    const blob = new Blob([bytes], { type: mimeType || 'audio/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.onended = () => URL.revokeObjectURL(url);
+                    audio.play();
+                } catch (e) {
+                    this.showToast("Audio play failed", "error");
+                }
+            }
+
+            async toggleMic() {
+                if (this.state.isMicActive) {
+                    // STOP
+                    this.stopWebSpeech();
+                    this.state.isMicActive = false;
+                    this.updateMicUI(false);
+                } else {
+                    // START
+                    try {
+                        await this.startWebSpeech();
+                        this.state.isMicActive = true;
+                        this.updateMicUI(true);
+                        this.showToast("Broadcasting Live", "success");
+                    } catch (e) {
+                        console.error("Mic Error", e);
+                        this.showToast("Microphone Error: " + e.message, "error");
+                        this.state.isMicActive = false;
+                        this.updateMicUI(false);
+                    }
+                }
+            }
+
+            // ===================== FIX: BUFFER HELPERS (Teacher) =====================
+            normalizeSpacing(text) {
+                return String(text || "")
+                    .replace(/\s+/g, " ")
+                    .replace(/\s+([,.!?…])/g, "$1")
+                    .trim();
+            }
+
+            endsWithSentenceBoundary(text) {
+                return /([.!?…]+["')\]]?)\s*$/.test(String(text || "").trim());
+            }
+
+            appendTeacherFinalChunk(chunk) {
+                const c = this.normalizeSpacing(chunk);
+                if (!c) return;
+
+                if (!this.teacherBuffer.text) this.teacherBuffer.text = c;
+                else this.teacherBuffer.text = this.normalizeSpacing(this.teacherBuffer.text + " " + c);
+
+                this.teacherBuffer.lastAppendAt = Date.now();
+
+                if (this.endsWithSentenceBoundary(c)) {
+                    this.flushTeacherBuffer(true);
+                    return;
+                }
+
+                this.scheduleTeacherFlush(950);
+            }
+
+            scheduleTeacherFlush(ms = 950) {
+                if (this.teacherBuffer.flushTimer) clearTimeout(this.teacherBuffer.flushTimer);
+                this.teacherBuffer.flushTimer = setTimeout(() => {
+                    this.flushTeacherBuffer(false);
+                }, ms);
+            }
+
+            flushTeacherBuffer(force = false) {
+                if (this.teacherBuffer.flushTimer) {
+                    clearTimeout(this.teacherBuffer.flushTimer);
+                    this.teacherBuffer.flushTimer = null;
+                }
+
+                const text = this.normalizeSpacing(this.teacherBuffer.text);
+                if (!text) return;
+
+                if (!force) {
+                    const tooShort = text.length < 18 && !this.endsWithSentenceBoundary(text);
+                    if (tooShort) return;
+                }
+
+                this.teacherBuffer.text = "";
+                this.teacherBuffer.lastAppendAt = 0;
+
+                // FIX: broadcast dedupe guard
+                const now = Date.now();
+                if (this.teacherLastBroadcast.text === text && (now - this.teacherLastBroadcast.at) < 2000) return;
+                this.teacherLastBroadcast = { text, at: now };
+
+                this.broadcastMessage(text);
+            }
+            // ========================================================================
+
+            async startWebSpeech() {
+                if (!SpeechRecognition) {
+                    throw new Error('Web Speech API not supported in this browser');
+                }
+
+                // Wake Lock
+                if ('wakeLock' in navigator) {
+                    try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { }
+                }
+
+                // Reset dedupe
+                try { this.teacherFinalSeen.clear(); } catch (_) { }
+                this.teacherGlobalFinal = { text: "", at: 0 };
+
+                this.recognition = new SpeechRecognition();
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+                this.recognition.lang = this.state.lang || 'en-US';
+                this.recognition.maxAlternatives = 1;
+
+                this.recognition.onstart = () => {
+                    console.log('Speech recognition started');
+                };
+
+                // ===================== FIX: DEDUPED + BUFFERED onresult =====================
+                this.recognition.onresult = (event) => {
+                    let interimTranscript = "";
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = this.normalizeSpacing(event.results[i][0].transcript || "");
+                        if (!transcript) continue;
+
+                        if (event.results[i].isFinal) {
+                            // per-index dedupe
+                            const prev = this.teacherFinalSeen.get(i);
+                            if (prev === transcript) continue;
+                            this.teacherFinalSeen.set(i, transcript);
+
+                            // global dedupe across indices (fixes repeat repeat)
+                            const now = Date.now();
+                            if (this.teacherGlobalFinal.text === transcript && (now - this.teacherGlobalFinal.at) < 1800) {
+                                continue;
+                            }
+                            this.teacherGlobalFinal = { text: transcript, at: now };
+
+                            this.appendTeacherFinalChunk(transcript);
+                        } else {
+                            interimTranscript += " " + transcript;
+                        }
+                    }
+
+                    const ui = document.getElementById("teacher-transcript");
+                    if (ui) {
+                        const buffered = this.teacherBuffer?.text ? (this.teacherBuffer.text + " ") : "";
+                        ui.innerText = this.normalizeSpacing(buffered + interimTranscript);
+                    }
+                };
+                // ================================================================================================
+
+                this.recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    this.showToast(`Speech error: ${event.error}`, 'error');
+                };
+
+                // FIX: if we intentionally paused mic due to TTS, do NOT auto restart here
+                this.recognition.onend = () => {
+                    if (this.ttsPausedMic) return;
+
+                    try { this.flushTeacherBuffer(true); } catch (_) { }
+
+                    if (this.state.isMicActive) {
+                        setTimeout(() => {
+                            try {
+                                this.recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart failed:', e);
+                            }
+                        }, 120);
+                    }
+                };
+
+                this.recognition.start();
+            }
+
+            stopWebSpeech() {
+                // Flush any pending buffered text so it won't be lost
+                try { this.flushTeacherBuffer(true); } catch (_) { }
+
+                try { if (this.recognition) this.recognition.stop(); } catch (_) { }
+                try { if (this.wakeLock) this.wakeLock.release(); } catch (_) { }
+
+                this.recognition = null;
+            }
+
+            updateMicUI(active) {
+                const btn = document.getElementById('mic-btn');
+                const bars = document.querySelectorAll('#mic-status div');
+
+                if (!btn) return;
+
+                if (active) {
+                    btn.classList.add('bg-red-500', 'text-white', 'mic-active-ring');
+                    btn.classList.remove('bg-gray-100', 'text-gray-600');
+                    btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                    bars.forEach(b => b.classList.add('bg-red-400'));
+                } else {
+                    btn.classList.remove('bg-red-500', 'text-white', 'mic-active-ring');
+                    btn.classList.add('bg-gray-100', 'text-gray-600');
+                    btn.innerHTML = '<i class="fa-solid fa-microphone-slash text-sm"></i>';
+                    bars.forEach(b => b.classList.remove('bg-red-400'));
+                }
+            }
+
+            // FIX: broadcast dedupe (extra safety)
+            broadcastMessage(text) {
+                const clean = this.normalizeSpacing(text);
+                if (!clean) return;
+
+                const now = Date.now();
+                if (this.teacherLastBroadcast.text === clean && (now - this.teacherLastBroadcast.at) < 2000) return;
+                this.teacherLastBroadcast = { text: clean, at: now };
+
+                push(ref(this.db, `chats/${this.state.room}/messages`), {
+                    text: clean,
+                    lang: this.state.lang,
+                    senderName: this.state.name,
+                    senderId: this.state.name, // Simple ID for now
+                    gender: this.state.gender,
+                    timestamp: Date.now()
+                });
+            }
+
+            sendQuestion() {
+                const val = document.getElementById('q-input')?.value?.trim();
+                if (!val) return;
+
+                push(ref(this.db, `chats/${this.state.room}/questions`), {
+                    text: val,
+                    lang: this.state.lang,
+                    senderName: this.state.name,
+                    timestamp: Date.now()
+                });
+
+                document.getElementById('q-input').value = '';
+                this.toggleModal('question');
+                this.showToast("Question Sent", "success");
+            }
+
             sendReaction(emoji) {
-                push(ref(this.db, `chats/${this.state.room}/reactions`), { emoji, senderName: this.state.name });
-                this.showToast(`Sent ${emoji}`);
+                this.showToast(`Sent ${emoji}`, "success");
+                const float = document.createElement('div');
+                float.innerText = emoji;
+                float.className = 'fixed bottom-20 left-1/2 text-4xl pointer-events-none animate-bounce z-50';
+                float.style.transition = 'all 1s ease-out';
+                document.body.appendChild(float);
+                setTimeout(() => {
+                    float.style.transform = 'translateY(-200px) scale(0)';
+                    float.style.opacity = '0';
+                    setTimeout(() => float.remove(), 1000);
+                }, 50);
+
+                // Send reaction to Firebase for teacher notification
+                if (this.state.role === 'student' && this.state.room) {
+                    push(ref(this.db, `chats/${this.state.room}/reactions`), {
+                        emoji: emoji,
+                        senderName: this.state.name,
+                        timestamp: Date.now()
+                    }).catch(() => {});
+                }
+            }
+
+            // Helper: Remove periods after ok/okay/okey to prevent sentence splitting
+            cleanOkeyPeriods(text) {
+                if (!text) return text;
+                return text
+                    .replace(/^(ok[eéy]*)\.\s*/gi, '$1 ')
+                    .replace(/\s(ok[eéy]*)\.\s*/gi, ' $1 ')
+                    .replace(/^(ok[eéy]*)\.$/gi, '$1')
+                    .trim();
+            }
+
+            // FIX: normalize app language code -> google translate accepted code
+            toGoogleLang(code) {
+                if (!code) return 'auto';
+                const c = String(code).trim();
+
+                // keep common region codes
+                const keep = new Set(['zh-CN', 'zh-TW', 'pt-BR', 'pt-PT', 'fr-CA']);
+                if (keep.has(c)) return c;
+
+                // google often prefers tl for Filipino
+                if (c === 'fil') return 'tl';
+
+                // strip region
+                if (c.includes('-')) return c.split('-')[0];
+
+                return c;
+            }
+
+            // FIX: translateText returns ALL segments + region handling (nl-BE -> nl)
+            async translateText(text, source, target) {
+                if (!text) return "";
+                if (!target) return text;
+
+                const sl = source ? this.toGoogleLang(source) : 'auto';
+                const tl = this.toGoogleLang(target);
+
+                if (sl !== 'auto' && sl === tl) return text;
+
+                let normalizedText = String(text);
+
+                if (source === "nl" || source === "nl-BE") {
+                    normalizedText = normalizedText.replace(/\b(oké|okee|okey|oke)\b/gi, "okay");
+                }
+
+                normalizedText = this.cleanOkeyPeriods(normalizedText);
+
+                try {
+                    const url =
+                        "https://translate.googleapis.com/translate_a/single" +
+                        `?client=gtx&sl=${encodeURIComponent(sl)}` +
+                        `&tl=${encodeURIComponent(tl)}` +
+                        `&dt=t&q=${encodeURIComponent(normalizedText)}`;
+
+                    const res = await fetch(url);
+                    if (!res.ok) return text;
+
+                    const json = await res.json();
+
+                    if (Array.isArray(json?.[0])) {
+                        const joined = json[0]
+                            .map(seg => (Array.isArray(seg) ? (seg[0] || "") : ""))
+                            .join("");
+                        return joined || text;
+                    }
+
+                    return text;
+                } catch (e) {
+                    return text;
+                }
             }
 
             copyCode() {
                 navigator.clipboard.writeText(this.state.room);
-                this.showToast("Copied!", "success");
-            }
-            
-            clearNotifications() {
-                document.getElementById('notifications-list').innerHTML = '';
+                this.showToast("Copied to clipboard", "success");
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => new SuccesApp());
     </script>
 </body>
+
 </html>
