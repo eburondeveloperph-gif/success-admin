@@ -1,8 +1,4 @@
-Here is the updated file. I have applied the new Deepgram settings (Model Nova-3, Multi-language, Endpointing 10, Punctuation) and updated the API Key to match the one provided in your configuration snippet.
 
-I have optimized the configuration for the browser environment: while I applied the logic settings (`endpointing`, `model`, `language`), I kept the browser's default audio encoding (WebM) instead of forcing `linear16`, as forcing raw PCM encoding on `MediaRecorder` data in a browser will break the audio stream.
-
-```html
 <!DOCTYPE html>  <html lang="en">  <head>  
     <meta charset="UTF-8">  
     <meta name="viewport"  
