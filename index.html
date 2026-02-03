@@ -581,6 +581,44 @@
         const CREDENTIALS = {
             DEEPGRAM: "11ee938d032ce7c36c6fa82338274be5e4ada847",
             CARTESIA: "sk_car_yWEX9Mp2LwKju8FXyosGhj",
+            // Deepgram Lexicon - Keywords to boost recognition accuracy
+            DEEPGRAM_KEYWORDS: [
+                // Educational terms
+                "curriculum:2",
+                "syllabus:2",
+                "pedagogy:2",
+                "assessment:1",
+                "homework:1",
+                "assignment:1",
+                "quiz:1",
+                "examination:1",
+                "lecture:1",
+                "tutorial:1",
+                // Classroom phrases
+                "please repeat:1",
+                "any questions:1",
+                "understand:1",
+                "example:1",
+                "exercise:1",
+                // Common names/terms (add your specific terms here)
+                "Success Class:3",
+                "teacher:1",
+                "student:1",
+                "classroom:1",
+                // Dutch/Flemish acknowledgment words (fix for "okey" issue)
+                "oké:2",
+                "okee:2",
+                "okey:2",
+                "oke:2",
+                "okay:2",
+                "ok:1",
+                "goed:1",
+                "ja:1",
+                "nee:1",
+                "alstublieft:1",
+                "dank u:1",
+                "dankjewel:1"
+            ],
             CARTESIA_VOICES: {
                 "en": "cbaf8084-f009-4838-a096-07ee2e6612b1", // Cathy
                 "hi": "faf0731e-dfb9-4cfc-8119-259a79b27e12", // Riya
@@ -1375,7 +1413,8 @@
                         smart_format: true,
                         interim_results: true,
                         endpointing: 250,
-                        utterance_end_ms: 1000
+                        utterance_end_ms: 1000,
+                        keywords: CREDENTIALS.DEEPGRAM_KEYWORDS
                     });
 
                     await new Promise((resolve, reject) => {
@@ -2191,7 +2230,8 @@
                     smart_format: true,
                     interim_results: true,
                     endpointing: 250, // Ultra-fast endpointing for 1.5s latency target
-                    utterance_end_ms: 1000
+                    utterance_end_ms: 1000,
+                    keywords: CREDENTIALS.DEEPGRAM_KEYWORDS
                 });
 
                 this.dgSocket.on(LiveTranscriptionEvents.Open, () => {
@@ -2298,8 +2338,16 @@
                 if (!text) return '';
                 if (!source || !target) return text;
                 if (source === target) return text;
+                
+                // Normalize Dutch/Flemish "okey" variants before translation
+                let normalizedText = text;
+                if (source === 'nl' || source === 'nl-BE') {
+                    // Replace Dutch "okey" variants with standard "okay" for better translation
+                    normalizedText = text.replace(/\b(oké|okee|okey|oke)\b/gi, 'okay');
+                }
+                
                 try {
-                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(text)}`);
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(normalizedText)}`);
                     const json = await res.json();
                     return json[0][0][0];
                 } catch (e) { return text; }
