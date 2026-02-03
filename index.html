@@ -1400,7 +1400,7 @@
                     // Start Deepgram live
                     this.student.dgClient = createClient(CREDENTIALS.DEEPGRAM);
                     this.student.dgSocket = this.student.dgClient.listen.live({
-                        model: "nova-3",
+                        model: "raptor-mini",
                         language: (this.state.lang || 'en').split('-')[0],
                         smart_format: true,
                         punctuate: false, // Disable periods to prevent ok/okey sentence breaks
@@ -2220,7 +2220,7 @@
 
                 this.dgClient = createClient(CREDENTIALS.DEEPGRAM);
                 this.dgSocket = this.dgClient.listen.live({
-                    model: "nova-3",
+                    model: "raptor-mini",
                     language: this.state.lang.split('-')[0], // Handle en-US etc
                     smart_format: true,
                     punctuate: false, // Disable periods to prevent ok/okey sentence breaks
