@@ -6,8 +6,8 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#3b82f6">
-    <link rel="manifest"
-        href='data:application/json,{"name":"Succes Class","short_name":"Succes","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#3b82f6","icons":[{"src":"pwa_icon.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Succes Class - Real-time Translation & Hybrid Learning</title>
@@ -981,19 +981,9 @@
 
             registerServiceWorker() {
                 if ('serviceWorker' in navigator) {
-                    const swCode = `
-                        const CACHE_NAME = 'orbit-v1';
-                        const ASSETS = ['./', './index.html', './pwa_icon.png'];
-                        self.addEventListener('install', (e) => {
-                            e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
-                        });
-                        self.addEventListener('fetch', (e) => {
-                            e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request)));
-                        });
-                    `;
-                    const blob = new Blob([swCode], { type: 'application/javascript' });
-                    const url = URL.createObjectURL(blob);
-                    navigator.serviceWorker.register(url).catch(err => console.log('SW failed', err));
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(reg => console.log('SW registered:', reg.scope))
+                        .catch(err => console.log('SW failed:', err));
                 }
             }
 
