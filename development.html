@@ -6,10 +6,8 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#3b82f6">
-    <link rel="manifest" href="./manifest.json">
-    <link rel="icon" type="image/png" href="./pwa_icon.png">
-    <link rel="apple-touch-icon" href="./pwa_icon.png">
-    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest"
+        href='data:application/json,{"name":"Succes Class","short_name":"Succes","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#3b82f6","icons":[{"src":"pwa_icon.png","sizes":"512x512","type":"image/png"}]}'>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Succes Class - Real-time Translation & Hybrid Learning</title>
@@ -581,46 +579,8 @@
 
         // --- CREDENTIALS ---
         const CREDENTIALS = {
-            DEEPGRAM: "3cb99a17199483105305eae50ca62a2390e148e6",
+            DEEPGRAM: "11ee938d032ce7c36c6fa82338274be5e4ada847",
             CARTESIA: "sk_car_yWEX9Mp2LwKju8FXyosGhj",
-            // Deepgram Lexicon - Keywords to boost recognition accuracy
-            DEEPGRAM_KEYWORDS: [
-                // Educational terms
-                "curriculum:2",
-                "syllabus:2",
-                "pedagogy:2",
-                "assessment:1",
-                "homework:1",
-                "assignment:1",
-                "quiz:1",
-                "examination:1",
-                "lecture:1",
-                "tutorial:1",
-                // Classroom phrases
-                "please repeat:1",
-                "any questions:1",
-                "understand:1",
-                "example:1",
-                "exercise:1",
-                // Common names/terms (add your specific terms here)
-                "Success Class:3",
-                "teacher:1",
-                "student:1",
-                "classroom:1",
-                // Dutch/Flemish acknowledgment words (fix for "okey" issue)
-                "oké:2",
-                "okee:2",
-                "okey:2",
-                "oke:2",
-                "okay:2",
-                "ok:1",
-                "goed:1",
-                "ja:1",
-                "nee:1",
-                "alstublieft:1",
-                "dank u:1",
-                "dankjewel:1"
-            ],
             CARTESIA_VOICES: {
                 "en": "cbaf8084-f009-4838-a096-07ee2e6612b1", // Cathy
                 "hi": "faf0731e-dfb9-4cfc-8119-259a79b27e12", // Riya
@@ -983,9 +943,19 @@
 
             registerServiceWorker() {
                 if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('./sw.js')
-                        .then(reg => console.log('SW registered:', reg.scope))
-                        .catch(err => console.log('SW failed:', err));
+                    const swCode = `
+                        const CACHE_NAME = 'orbit-v1';
+                        const ASSETS = ['./', './index.html', './pwa_icon.png'];
+                        self.addEventListener('install', (e) => {
+                            e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+                        });
+                        self.addEventListener('fetch', (e) => {
+                            e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request)));
+                        });
+                    `;
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const url = URL.createObjectURL(blob);
+                    navigator.serviceWorker.register(url).catch(err => console.log('SW failed', err));
                 }
             }
 
@@ -1406,8 +1376,7 @@
                         punctuate: false, // Disable periods to prevent ok/okey sentence breaks
                         interim_results: true,
                         endpointing: 250,
-                        utterance_end_ms: 1000,
-                        keywords: CREDENTIALS.DEEPGRAM_KEYWORDS
+                        utterance_end_ms: 1000
                     });
 
                     await new Promise((resolve, reject) => {
@@ -1438,9 +1407,7 @@
                             this.student.lastInterim = t;
 
                             if (data.is_final) {
-                                // Clean ok/okay/okey periods to prevent sentence splitting
-                                const cleaned = this.cleanOkeyPeriods(t);
-                                this.student.finalParts.push(cleaned);
+                                this.student.finalParts.push(t);
                             }
                         });
 
@@ -2226,8 +2193,7 @@
                     punctuate: false, // Disable periods to prevent ok/okey sentence breaks
                     interim_results: true,
                     endpointing: 250, // Ultra-fast endpointing for 1.5s latency target
-                    utterance_end_ms: 1000,
-                    keywords: CREDENTIALS.DEEPGRAM_KEYWORDS
+                    utterance_end_ms: 1000
                 });
 
                 this.dgSocket.on(LiveTranscriptionEvents.Open, () => {
@@ -2241,10 +2207,8 @@
                 });
 
                 this.dgSocket.on(LiveTranscriptionEvents.Transcript, (data) => {
-                    let transcript = data.channel.alternatives[0].transcript;
+                    const transcript = data.channel.alternatives[0].transcript;
                     if (transcript && data.is_final) {
-                        // Clean ok/okay/okey periods to prevent sentence splitting
-                        transcript = this.cleanOkeyPeriods(transcript);
                         this.broadcastMessage(transcript);
                     }
 
@@ -2332,32 +2296,12 @@
                 }
             }
 
-            // Helper: Remove periods after ok/okay/okey to prevent sentence splitting
-            cleanOkeyPeriods(text) {
-                if (!text) return text;
-                // Remove period after standalone ok/okay/okey/oke/okee/oké at start or as single word
-                // Pattern: "Ok." or "Okay." or "Okey." etc followed by space or end
-                return text
-                    .replace(/^(ok[eéy]*)\.\s*/gi, '$1 ')  // At start: "Ok. Hello" -> "Ok Hello"
-                    .replace(/\s(ok[eéy]*)\.\s*/gi, ' $1 ') // Mid-sentence after space
-                    .replace(/^(ok[eéy]*)\.$/gi, '$1')      // Standalone: "Ok." -> "Ok"
-                    .trim();
-            }
-
             async translateText(text, source, target) {
                 if (!text) return '';
                 if (!source || !target) return text;
                 if (source === target) return text;
-                
-                // Normalize Dutch/Flemish "okey" variants before translation
-                let normalizedText = text;
-                if (source === 'nl' || source === 'nl-BE') {
-                    // Replace Dutch "okey" variants with standard "okay" for better translation
-                    normalizedText = text.replace(/\b(oké|okee|okey|oke)\b/gi, 'okay');
-                }
-                
                 try {
-                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(normalizedText)}`);
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURI(text)}`);
                     const json = await res.json();
                     return json[0][0][0];
                 } catch (e) { return text; }
