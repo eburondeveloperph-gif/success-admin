@@ -1435,7 +1435,9 @@
                             this.student.lastInterim = t;
 
                             if (data.is_final) {
-                                this.student.finalParts.push(t);
+                                // Clean ok/okay/okey periods to prevent sentence splitting
+                                const cleaned = this.cleanOkeyPeriods(t);
+                                this.student.finalParts.push(cleaned);
                             }
                         });
 
@@ -2235,8 +2237,10 @@
                 });
 
                 this.dgSocket.on(LiveTranscriptionEvents.Transcript, (data) => {
-                    const transcript = data.channel.alternatives[0].transcript;
+                    let transcript = data.channel.alternatives[0].transcript;
                     if (transcript && data.is_final) {
+                        // Clean ok/okay/okey periods to prevent sentence splitting
+                        transcript = this.cleanOkeyPeriods(transcript);
                         this.broadcastMessage(transcript);
                     }
 
@@ -2322,6 +2326,18 @@
                         timestamp: Date.now()
                     }).catch(() => {});
                 }
+            }
+
+            // Helper: Remove periods after ok/okay/okey to prevent sentence splitting
+            cleanOkeyPeriods(text) {
+                if (!text) return text;
+                // Remove period after standalone ok/okay/okey/oke/okee/oké at start or as single word
+                // Pattern: "Ok." or "Okay." or "Okey." etc followed by space or end
+                return text
+                    .replace(/^(ok[eéy]*)\.\s*/gi, '$1 ')  // At start: "Ok. Hello" -> "Ok Hello"
+                    .replace(/\s(ok[eéy]*)\.\s*/gi, ' $1 ') // Mid-sentence after space
+                    .replace(/^(ok[eéy]*)\.$/gi, '$1')      // Standalone: "Ok." -> "Ok"
+                    .trim();
             }
 
             async translateText(text, source, target) {
